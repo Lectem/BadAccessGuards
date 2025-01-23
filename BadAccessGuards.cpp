@@ -152,22 +152,13 @@ struct BadAccessGuardConfig
 
 // Return true if you want to break (unless breakASAP is set)
 bool BadAccessGuardReport(bool assertionOrWarning, const char* fmt, ...);
-
-void BA_GUARD_NO_INLINE OnBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message)
+bool DefaultReportBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message)
 {
-	// If you break here it means that we detected some bad memory access pattern
-	// It could be that you are mutating a container recursively or a multi-threading race condition
-	// You can now:
-	// - Step/Continue to get information about the error
-	// - Inspect other threads callstacks (If using Visual Studio: Debug => Windows => Parallel Stacks)
-	//   If the debugger broke and froze the other threads fast enough, you might be able to find the offending thread.
-	if (assertionOrWarning && gBadAccessGuardConfig.breakASAP) BA_GUARD_DEBUGBREAK(); // Break asap in an attempt to catch the other thread in the act !
 	const bool previousState = BadAccessGuardShadow::GetState(previousOperation);
 	const bool fromSameThread = IsAddressInCurrentStack(BadAccessGuardShadow::GetInStackAddr(previousOperation));
-	bool breakAllowed = assertionOrWarning;
 	if (message)
 	{
-		breakAllowed = BadAccessGuardReport(assertionOrWarning, message);
+		return BadAccessGuardReport(assertionOrWarning, message);
 	}
 	else
 	{
@@ -181,13 +172,13 @@ void BA_GUARD_NO_INLINE OnBadAccess(StateAndStackAddr previousOperation, BadAcce
 		if (fromSameThread)
 		{
 
-			breakAllowed = BadAccessGuardReport(assertionOrWarning, "Recursion detected: This may lead to invalid operations\n- Parent operation: %s.\n- This operation: %s.", stateToStr[previousState], stateToStr[toState]);
+			return BadAccessGuardReport(assertionOrWarning, "Recursion detected: This may lead to invalid operations\n- Parent operation: %s.\n- This operation: %s.", stateToStr[previousState], stateToStr[toState]);
 		}
 		else
 		{
 			ThreadDescBuffer outDescription;
 			uint64_t otherThreadId = FindThreadWithPtrInStack(BadAccessGuardShadow::GetInStackAddr(previousOperation), outDescription);
-			breakAllowed = BadAccessGuardReport(assertionOrWarning,
+			return BadAccessGuardReport(assertionOrWarning,
 				"Race condition: Multiple threads are reading/writing to the data at the same time, potentially corrupting it!\n- Other thread: %s (Desc=%s Id=%u)\n- This thread %s.",
 				stateToStr[previousState],
 				outDescription[0] != '\0' ? outDescription : "<Unknown>",
@@ -198,11 +189,21 @@ void BA_GUARD_NO_INLINE OnBadAccess(StateAndStackAddr previousOperation, BadAcce
 		}
 
 	}
+}
 
-	if (assertionOrWarning && breakAllowed && !gBadAccessGuardConfig.breakASAP)
-	{
-		BA_GUARD_DEBUGBREAK();
-	}
+void BA_GUARD_NO_INLINE OnBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message)
+{
+	// If you break here it means that we detected some bad memory access pattern
+	// It could be that you are mutating a container recursively or a multi-threading race condition
+	// You can now:
+	// - Step/Continue to get information about the error
+	// - Inspect other threads callstacks (If using Visual Studio: Debug => Windows => Parallel Stacks)
+	//   If the debugger broke and froze the other threads fast enough, you might be able to find the offending thread.
+	if (assertionOrWarning && gBadAccessGuardConfig.breakASAP) BA_GUARD_DEBUGBREAK(); // Break asap in an attempt to catch the other thread in the act !
+	
+	const bool breakAllowed = DefaultReportBadAccess(previousOperation, toState, assertionOrWarning, message);
+
+	if (assertionOrWarning && breakAllowed && !gBadAccessGuardConfig.breakASAP)	BA_GUARD_DEBUGBREAK();
 }
 
 bool BadAccessGuardReport(bool assertionOrWarning, const char* fmt, ...)
