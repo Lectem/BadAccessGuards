@@ -154,11 +154,15 @@ struct BadAccessGuardConfig
 bool BadAccessGuardReport(bool assertionOrWarning, const char* fmt, ...);
 bool DefaultReportBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message)
 {
-	const bool previousState = BadAccessGuardShadow::GetState(previousOperation);
+	const BadAccessGuardState previousState = BadAccessGuardShadow::GetState(previousOperation);
 	const bool fromSameThread = IsAddressInCurrentStack(BadAccessGuardShadow::GetInStackAddr(previousOperation));
 	if (message)
 	{
 		return BadAccessGuardReport(assertionOrWarning, message);
+	}
+	else if (previousState >= BAGuard_StatesCount)
+	{
+		return BadAccessGuardReport(assertionOrWarning, "Shadow value was corrupted! This could be due to use after-free, out of bounds writes, etc...");
 	}
 	else
 	{
@@ -167,7 +171,7 @@ bool DefaultReportBadAccess(StateAndStackAddr previousOperation, BadAccessGuardS
 			"Writing",
 			"Destroyed"
 		};
-		static_assert(sizeof(stateToStr) / sizeof(stateToStr[0]) == BAD_ACCESS_STATES_COUNT, "Mismatch, new state added ?");
+		static_assert(sizeof(stateToStr) / sizeof(stateToStr[0]) == BAGuard_StatesCount, "Mismatch, new state added ?");
 
 		if (fromSameThread)
 		{

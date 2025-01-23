@@ -49,7 +49,7 @@ enum BadAccessGuardState : uint64_t
 	BAGuard_ReadingOrIdle = 0,
 	BAGuard_Writing = 1,
 	BAGuard_DestructorCalled = 2,
-	BAD_ACCESS_STATES_COUNT
+	BAGuard_StatesCount
 };
 
 using StateAndStackAddr = uintptr_t;
@@ -63,7 +63,7 @@ struct BadAccessGuardShadow
 	static constexpr int BadAccessStateBits = 2;
 	static_assert((1<< BadAccessStateBits) <= alignof(uint32_t), "Assume the stack base and size are at most aligned to your CPU native alignement");
 #endif
-	static_assert(BAD_ACCESS_STATES_COUNT <= (1 << BadAccessStateBits), "BadAccessGuardState must fit in the lower bits");
+	static_assert(BAGuard_StatesCount <= (1 << BadAccessStateBits), "BadAccessGuardState must fit in the lower bits");
 
 	static constexpr StateAndStackAddr BadAccessStateMask = (1 << BadAccessStateBits) - 1;
 	static constexpr StateAndStackAddr InStackAddrMask = StateAndStackAddr(-1) ^ BadAccessStateMask;
