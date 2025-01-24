@@ -109,9 +109,16 @@ bool IsAddressInCurrentStack(void* ptr)
 	size_t stackSize;
 	if (0 != pthread_attr_getstack(&attributes, &stackAddr, &stackSize)) return false;
 
-	// On linux, address is indeed the start address (what you would give if allocating yourself)
+	// On POSIX, address is indeed the start address (what you would give if allocating yourself)
 	return stackAddr <= ptr && uintptr_t(ptr) < (uintptr_t(stackAddr) + stackSize);
 }
+
+// There is no way to iterate threads and get their stack address + size.
+// Attempted to get information for linux but failed, same conclusion as https://unix.stackexchange.com/questions/758975/how-can-i-locate-the-stacks-of-child-tasks-threads-using-proc-pid-maps
+// So in the end we'd need to keep the threadid instead of just a pointer to the current thread stack, which would be too expensive.
+// Just let the user inspect the stacks in the debugger instead.
+// The alternative is for the user to keep track of their threads and implement this function themselves.
+// We would also setup hooks to intercept pthread functions (this is what TSan does) but this is getting too heavy for this mini library.
 uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription) { outDescription[0] = '\0'; return 0; }
 #elif defined(__APPLE__) // Apple, why do you make it so hard to look for your posix_*_np functions... Just give us docs or something instead of having us dive into the darwin-libpthread code! Didn't bother goind further and try to compile/run this.
 #include <pthread.h>
