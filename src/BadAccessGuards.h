@@ -1,9 +1,11 @@
 ﻿#pragma once
 
 // TODO: documentation
+#ifndef BAD_ACCESS_GUARDS_ENABLE
+#define BAD_ACCESS_GUARDS_ENABLE 1
+#endif
 
-#define BAD_ACCESS_GUARDS_ENABLE
-#ifdef BAD_ACCESS_GUARDS_ENABLE
+#if BAD_ACCESS_GUARDS_ENABLE
 
 #include <stdint.h>
 
@@ -24,7 +26,7 @@
 #elif defined(__GNUC__) || defined(__GNUG__) // GCC / clang
 # define BA_GUARD_FORCE_INLINE __attribute__((always_inline))
 # define BA_GUARD_NO_INLINE __attribute__ ((noinline))
-# define BA_GUARD_GET_PTR_IN_STACK() __builtin_frame_address(0) // Is this the right thing ?
+# define BA_GUARD_GET_PTR_IN_STACK() __builtin_frame_address(0)
 # define BA_GUARD_ATOMIC_RELAXED_LOAD_U64(var) __atomic_load_n(&var, __ATOMIC_RELAXED);
 # define BA_GUARD_ATOMIC_RELAXED_STORE_U64(var, value) __atomic_store_n(&var, value, __ATOMIC_RELAXED);
 # if defined(__clang__)

@@ -1,11 +1,12 @@
-﻿
-///////////////////////////////
-////// DEFAULT IMPL FILE //////
-///////////////////////////////
+﻿//////////////////////////////////////////////////////////////////
+//////                  DEFAULT IMPL FILE                   //////
+////// Feel free to modify it as needed for your platforms! //////
+////// Or if is is enough, just use BadAccessGuardSetConfig //////
+//////////////////////////////////////////////////////////////////
 
 #include "BadAccessGuards.h"
 
-#ifdef BAD_ACCESS_GUARDS_ENABLE
+#if BAD_ACCESS_GUARDS_ENABLE
 
 #include <stdlib.h>
 #include <stdio.h>
