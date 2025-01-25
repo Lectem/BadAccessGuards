@@ -59,7 +59,7 @@ using StateAndStackAddr = uintptr_t;
 struct BadAccessGuardShadow
 {
 #ifdef _WIN32
-	// On Windows all stacks are aligned to page boundaries (both address and size), so store the state as a byte to avoid masking!
+	// On Windows all stacks are aligned to page boundaries (both address and size), so we can store the state as a byte to avoid masking!
 	static constexpr int BadAccessStateBits = 8;
 	static_assert((1 << BadAccessStateBits) <= 4096, "The number of bits used for the state must be smaller than page alignment");
 #else
@@ -86,7 +86,7 @@ struct BadAccessGuardShadow
 
 // We have two versions to reduce code size at call site
 void BA_GUARD_NO_INLINE OnBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message);
-// Both inline and no_inline! inline is necessary because we define it in a header, but we still don't actually want to inline it, hence no-inline.
+// Both inline and no_inline! inline is necessary because we define it in a header, but still we don't actually want to inline it, hence no-inline.
 inline void BA_GUARD_NO_INLINE OnBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState) { OnBadAccess(previousOperation, toState, true, nullptr); }
 
 struct BadAccessGuardRead
@@ -190,11 +190,16 @@ struct BadAccessGuardConfig
 	// Of course, if you save minidumps, logging is probably unnecessary.
 	// Default true on windows if a debugger is detected during startup
 	bool breakASAP;
+
+	// If non-null, used to report errors instead of the default function.
+	// Breaking is still controlled by allowBreak and breakASAP.
+	using ReportBadAccessFunction = bool(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message);
+	ReportBadAccessFunction* reportBadAccess;
 };
 
 // Check BAD_ACCESS_GUARDS_ENABLE if you want to use those
 BadAccessGuardConfig BadAccessGuardGetConfig();
-void BadAccessGuardSetConfig(const BadAccessGuardConfig& config);
+void BadAccessGuardSetConfig(BadAccessGuardConfig config);
 
 #define BA_GUARD_DECL(SHADOWNAME)								mutable BadAccessGuardShadow SHADOWNAME
 #define BA_GUARD_READ(SHADOWNAME)								BadAccessGuardRead BAGuardRead_##SHADOWNAME{SHADOWNAME}

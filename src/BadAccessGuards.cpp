@@ -48,8 +48,8 @@ uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription)
 
 	DWORD idOfThreadWithAddrInStack = 0; // 0 is an invalid thread id
 	const DWORD dwOwnerPID = GetCurrentProcessId();
-	for(BOOL bHasThread = Thread32First(hThreadSnap, &te32); 
-		bHasThread && !idOfThreadWithAddrInStack; 
+	for (BOOL bHasThread = Thread32First(hThreadSnap, &te32);
+		bHasThread && !idOfThreadWithAddrInStack;
 		bHasThread = Thread32Next(hThreadSnap, &te32))
 	{
 		if (te32.th32OwnerProcessID == dwOwnerPID)
@@ -75,7 +75,7 @@ uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription)
 			} THREAD_BASIC_INFORMATION, * PTHREAD_BASIC_INFORMATION;
 
 
-			if (HANDLE threadHdl = OpenThread(THREAD_QUERY_INFORMATION|THREAD_QUERY_LIMITED_INFORMATION, FALSE, te32.th32ThreadID))
+			if (HANDLE threadHdl = OpenThread(THREAD_QUERY_INFORMATION | THREAD_QUERY_LIMITED_INFORMATION, FALSE, te32.th32ThreadID))
 			{
 				// Get TEB address
 				THREAD_BASIC_INFORMATION basicInfo;
@@ -140,21 +140,28 @@ bool IsAddressInCurrentStack(void* ptr) { return false; } // Who knows ?
 uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription) { outDescription[0] = '\0'; return 0; }
 #endif
 
+bool DefaultReportBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message);
+
 BadAccessGuardConfig gBadAccessGuardConfig{
-	// allowBreak
-	true,
-	// breakASAP
+	true, // allowBreak
 #ifdef WIN32
-		IsDebuggerPresent(),
+	(bool)IsDebuggerPresent(), // breakASAP
 #else
-// Note: Not implementing Linux as it seems there is no trival way to differentiate a tracer process that is a debugger from a profiler.
-//       Not implementing MacOs as would need to test
-		false,
+	// Note: Not implementing Linux as it seems there is no trival way to differentiate a tracer process that is a debugger from a profiler.
+	//       Not implementing MacOs as would need to test
+	false, // breakASAP
 #endif
+	DefaultReportBadAccess, // reportBadAccess
 };
 
 BadAccessGuardConfig BadAccessGuardGetConfig() { return gBadAccessGuardConfig; }
-void BadAccessGuardSetConfig(const BadAccessGuardConfig& config) { gBadAccessGuardConfig = config; }
+void BadAccessGuardSetConfig(BadAccessGuardConfig config)
+{
+	if (!config.reportBadAccess) {
+		config.reportBadAccess = DefaultReportBadAccess;
+	}
+	gBadAccessGuardConfig = config;
+}
 
 
 // Return true if you want to break (unless breakASAP is set)
@@ -211,8 +218,8 @@ void BA_GUARD_NO_INLINE OnBadAccess(StateAndStackAddr previousOperation, BadAcce
 	// - Inspect other threads callstacks (If using Visual Studio: Debug => Windows => Parallel Stacks)
 	//   If the debugger broke and froze the other threads fast enough, you might be able to find the offending thread.
 	if (assertionOrWarning && gBadAccessGuardConfig.allowBreak && gBadAccessGuardConfig.breakASAP) BA_GUARD_DEBUGBREAK(); // Break asap in an attempt to catch the other thread in the act !
-	
-	const bool breakAllowed = DefaultReportBadAccess(previousOperation, toState, assertionOrWarning, message);
+
+	const bool breakAllowed = gBadAccessGuardConfig.reportBadAccess(previousOperation, toState, assertionOrWarning, message);
 
 	if (assertionOrWarning && breakAllowed && gBadAccessGuardConfig.allowBreak && !gBadAccessGuardConfig.breakASAP)	BA_GUARD_DEBUGBREAK();
 }
