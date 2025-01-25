@@ -2,6 +2,9 @@
 
 // TODO: documentation
 
+#define BAD_ACCESS_GUARDS_ENABLE
+#ifdef BAD_ACCESS_GUARDS_ENABLE
+
 #include <stdint.h>
 
 // Why we use those macros:
@@ -176,13 +179,37 @@ struct BadAccessGuardDestroy
 	}
 };
 
-struct BadAccessGuardIgnoreDestroy
+struct BadAccessGuardConfig
 {
-	BadAccessGuardShadow& shadow;
-	BA_GUARD_FORCE_INLINE BadAccessGuardIgnoreDestroy(BadAccessGuardShadow& shadow)
-		: shadow(shadow)
-	{
-		shadow.SetStateAtomicRelaxed(BAGuard_ReadingOrIdle);
-	}
+	// Should we allow to break at all, or simply call BadAccessGuardReport
+	// Default: true
+	bool allowBreak;
+	// Set this to true if you want to break early.
+	// Usually you would want to set this to true when the debugger is connected.
+	// If no debugger is connected, you most likely want this set to false to get the error in your logs.
+	// Of course, if you save minidumps, logging is probably unnecessary.
+	// Default true on windows if a debugger is detected during startup
+	bool breakASAP;
 };
 
+// Check BAD_ACCESS_GUARDS_ENABLE if you want to use those
+BadAccessGuardConfig BadAccessGuardGetConfig();
+void BadAccessGuardSetConfig(const BadAccessGuardConfig& config);
+
+#define BA_GUARD_DECL(SHADOWNAME)								mutable BadAccessGuardShadow SHADOWNAME
+#define BA_GUARD_READ(SHADOWNAME)								BadAccessGuardRead BAGuardRead_##SHADOWNAME{SHADOWNAME}
+#define BA_GUARD_READ_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)		BadAccessGuardRead BAGuardRead_##SHADOWNAME{SHADOWNAME, (ASSERT_OR_WARN), (MESSAGE)}
+#define BA_GUARD_WRITE(SHADOWNAME)								BadAccessGuardWrite BAGuardWrite_##SHADOWNAME{SHADOWNAME}
+#define BA_GUARD_WRITE_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)	BadAccessGuardWriteEx BAGuardWriteEx_##SHADOWNAME{SHADOWNAME, (ASSERT_OR_WARN), (MESSAGE)}
+#define BA_GUARD_DESTROY(SHADOWNAME)							BadAccessGuardDestroy BAGuardDestroy_##SHADOWNAME{SHADOWNAME}
+
+#else // BAD_ACCESS_GUARDS_ENABLE
+
+#define BA_GUARD_DECL(SHADOWNAME)
+#define BA_GUARD_READ(SHADOWNAME)								do {} while(false)
+#define BA_GUARD_READ_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)	do {} while(false)
+#define BA_GUARD_WRITE(SHADOWNAME)								do {} while(false)
+#define BA_GUARD_WRITE_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)	do {} while(false)
+#define BA_GUARD_DESTROY(SHADOWNAME)								do {} while(false)
+
+#endif // BAD_ACCESS_GUARDS_ENABLE

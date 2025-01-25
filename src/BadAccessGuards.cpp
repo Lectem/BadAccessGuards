@@ -4,6 +4,9 @@
 ///////////////////////////////
 
 #include "BadAccessGuards.h"
+
+#ifdef BAD_ACCESS_GUARDS_ENABLE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -137,24 +140,21 @@ bool IsAddressInCurrentStack(void* ptr) { return false; } // Who knows ?
 uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription) { outDescription[0] = '\0'; return 0; }
 #endif
 
-struct BadAccessGuardConfig
-{
-
-	BadAccessGuardConfig() :
+BadAccessGuardConfig gBadAccessGuardConfig{
+	// allowBreak
+	true,
+	// breakASAP
 #ifdef WIN32
-		breakASAP(IsDebuggerPresent())
+		IsDebuggerPresent(),
 #else
-		breakASAP(false)
+// Note: Not implementing Linux as it seems there is no trival way to differentiate a tracer process that is a debugger from a profiler.
+//       Not implementing MacOs as would need to test
+		false,
 #endif
-	{}
+};
 
-	// Set this to true if you want to break early.
-	// Usually you would want to set this to true when the debugger is connected.
-	// If no debugger is connected, you most likely want this set to false to get the error in your logs.
-	// Of course, if you save minidumps, logging is probably unnecessary.
-	bool breakASAP;
-} gBadAccessGuardConfig;
-
+BadAccessGuardConfig BadAccessGuardGetConfig() { return gBadAccessGuardConfig; }
+void BadAccessGuardSetConfig(const BadAccessGuardConfig& config) { gBadAccessGuardConfig = config; }
 
 
 // Return true if you want to break (unless breakASAP is set)
@@ -207,14 +207,14 @@ void BA_GUARD_NO_INLINE OnBadAccess(StateAndStackAddr previousOperation, BadAcce
 	// If you break here it means that we detected some bad memory access pattern
 	// It could be that you are mutating a container recursively or a multi-threading race condition
 	// You can now:
-	// - Step/Continue to get information about the error
+	// - Step/Continue to get information about the error (potentially waking offending threads if caused by a race condition)
 	// - Inspect other threads callstacks (If using Visual Studio: Debug => Windows => Parallel Stacks)
 	//   If the debugger broke and froze the other threads fast enough, you might be able to find the offending thread.
-	if (assertionOrWarning && gBadAccessGuardConfig.breakASAP) BA_GUARD_DEBUGBREAK(); // Break asap in an attempt to catch the other thread in the act !
+	if (assertionOrWarning && gBadAccessGuardConfig.allowBreak && gBadAccessGuardConfig.breakASAP) BA_GUARD_DEBUGBREAK(); // Break asap in an attempt to catch the other thread in the act !
 	
 	const bool breakAllowed = DefaultReportBadAccess(previousOperation, toState, assertionOrWarning, message);
 
-	if (assertionOrWarning && breakAllowed && !gBadAccessGuardConfig.breakASAP)	BA_GUARD_DEBUGBREAK();
+	if (assertionOrWarning && breakAllowed && gBadAccessGuardConfig.allowBreak && !gBadAccessGuardConfig.breakASAP)	BA_GUARD_DEBUGBREAK();
 }
 
 bool BadAccessGuardReport(bool assertionOrWarning, const char* fmt, ...)
@@ -228,3 +228,4 @@ bool BadAccessGuardReport(bool assertionOrWarning, const char* fmt, ...)
 	return true;
 }
 
+#endif
