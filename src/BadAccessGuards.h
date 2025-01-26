@@ -13,22 +13,27 @@
 // - BA_GUARD_NO_INLINE: This is to limit performance impact on the fast path.
 // - BA_GUARD_GET_PTR_IN_STACK: No other portable way to do it. This must return a pointer to the current stack. Expected to be faster than getting the thread Id (and works with fibers).
 // - BA_GUARD_FORCE_INLINE: We want to reduce the overhead in debug builds as much as possible.
-// - BA_GUARD_ATOMIC_RELAXED_LOAD/STORE_U64: We really don't want to use std::atomic for debug build performance.
+// - BA_GUARD_ATOMIC_RELAXED_LOAD/STORE_UPTR: We really don't want to use std::atomic for debug build performance.
 //  On top of this, this avoids including std headers for project that may restrict its usage.
 #if defined(_MSC_VER) // MSVC
 # include <intrin.h> // Necessary for _AddressOfReturnAddress
 # define BA_GUARD_NO_INLINE __declspec(noinline)
 # define BA_GUARD_FORCE_INLINE __forceinline // Need to use /d2Obforceinline for MSVC 17.7+ debug builds, otherwise it doesnt work!
 # define BA_GUARD_GET_PTR_IN_STACK() _AddressOfReturnAddress()
-# define BA_GUARD_ATOMIC_RELAXED_LOAD_U64(var) static_cast<uint64_t>(__iso_volatile_load64(reinterpret_cast<volatile int64_t*>(&var)))
-# define BA_GUARD_ATOMIC_RELAXED_STORE_U64(var, value) __iso_volatile_store64(reinterpret_cast<volatile int64_t*>(&var), value)
+# ifdef _WIN64 // 64 bits
+#  define BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(var) static_cast<uintptr_t>(__iso_volatile_load64(reinterpret_cast<volatile int64_t*>(&var)))
+#  define BA_GUARD_ATOMIC_RELAXED_STORE_UPTR(var, value) __iso_volatile_store64(reinterpret_cast<volatile int64_t*>(&var), value)
+# else // Assume 32 bits
+#  define BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(var) static_cast<uintptr_t>(__iso_volatile_load32(reinterpret_cast<volatile int32_t*>(&var)))
+#  define BA_GUARD_ATOMIC_RELAXED_STORE_UPTR(var, value) __iso_volatile_store32(reinterpret_cast<volatile int32_t*>(&var), value)
+# endif
 # define BA_GUARD_DEBUGBREAK() __debugbreak()
 #elif defined(__GNUC__) || defined(__GNUG__) // GCC / clang
 # define BA_GUARD_FORCE_INLINE __attribute__((always_inline))
 # define BA_GUARD_NO_INLINE __attribute__ ((noinline))
 # define BA_GUARD_GET_PTR_IN_STACK() __builtin_frame_address(0)
-# define BA_GUARD_ATOMIC_RELAXED_LOAD_U64(var) __atomic_load_n(&var, __ATOMIC_RELAXED);
-# define BA_GUARD_ATOMIC_RELAXED_STORE_U64(var, value) __atomic_store_n(&var, value, __ATOMIC_RELAXED);
+# define BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(var) __atomic_load_n(&var, __ATOMIC_RELAXED);
+# define BA_GUARD_ATOMIC_RELAXED_STORE_UPTR(var, value) __atomic_store_n(&var, value, __ATOMIC_RELAXED);
 # if defined(__clang__)
 #  define BA_GUARD_DEBUGBREAK() __builtin_debugtrap()
 # else
@@ -49,7 +54,7 @@
 # error "Unknown compiler"
 #endif
 
-enum BadAccessGuardState : uint64_t
+enum BadAccessGuardState : uintptr_t
 {
 	BAGuard_ReadingOrIdle = 0,
 	BAGuard_Writing = 1,
@@ -79,7 +84,7 @@ struct BadAccessGuardShadow
 	BA_GUARD_FORCE_INLINE void SetStateAtomicRelaxed(BadAccessGuardState newState)
 	{
 		// All in a single line for debug builds... sorry !
-		BA_GUARD_ATOMIC_RELAXED_STORE_U64(stateAndInStackAddr, (uintptr_t(BA_GUARD_GET_PTR_IN_STACK()) & InStackAddrMask) | uint64_t(newState));
+		BA_GUARD_ATOMIC_RELAXED_STORE_UPTR(stateAndInStackAddr, (StateAndStackAddr(BA_GUARD_GET_PTR_IN_STACK()) & InStackAddrMask) | StateAndStackAddr(newState));
 	}
 	// Those are static because we want to work on copies of the data and not pay for the atomic access
 	static BA_GUARD_FORCE_INLINE BadAccessGuardState GetState(StateAndStackAddr packedValue) { return BadAccessGuardState(packedValue & BadAccessStateMask); }
@@ -96,7 +101,7 @@ struct BadAccessGuardRead
 	// We have two versions of the constructor purely for performance
 	BA_GUARD_FORCE_INLINE BadAccessGuardRead(BadAccessGuardShadow& shadow)
 	{
-		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_U64(shadow.stateAndInStackAddr);
+		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
 		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) // Early out on fast path
 		{
 			OnBadAccess(lastSeenOp, BAGuard_ReadingOrIdle);
@@ -104,7 +109,7 @@ struct BadAccessGuardRead
 	}
 	BA_GUARD_FORCE_INLINE BadAccessGuardRead(BadAccessGuardShadow& shadow, bool assertionOrWarning, char* message)
 	{
-		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_U64(shadow.stateAndInStackAddr);
+		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
 		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) // Early out on fast path
 		{
 			OnBadAccess(lastSeenOp, BAGuard_ReadingOrIdle, assertionOrWarning, message);
@@ -119,7 +124,7 @@ struct BadAccessGuardWrite
 	BA_GUARD_FORCE_INLINE BadAccessGuardWrite(BadAccessGuardShadow& shadow)
 		: shadow(shadow)
 	{
-		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_U64(shadow.stateAndInStackAddr);
+		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
 		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle)
 		{
 			OnBadAccess(lastSeenOp, BAGuard_Writing);
@@ -128,7 +133,7 @@ struct BadAccessGuardWrite
 	}
 	BA_GUARD_FORCE_INLINE ~BadAccessGuardWrite()
 	{
-		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_U64(shadow.stateAndInStackAddr);
+		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
 		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_Writing)
 		{
 			OnBadAccess(lastSeenOp, BAGuard_Writing);
@@ -148,7 +153,7 @@ struct BadAccessGuardWriteEx
 		, messsage(messsage)
 		, assertionOrWarning(assertionOrWarning)
 	{
-		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_U64(shadow.stateAndInStackAddr);
+		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
 		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle)
 		{
 			OnBadAccess(lastSeenOp, BAGuard_Writing, assertionOrWarning, messsage);
@@ -157,7 +162,7 @@ struct BadAccessGuardWriteEx
 	}
 	BA_GUARD_FORCE_INLINE ~BadAccessGuardWriteEx()
 	{
-		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_U64(shadow.stateAndInStackAddr);
+		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
 		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_Writing)
 		{
 			OnBadAccess(lastSeenOp, BAGuard_Writing, assertionOrWarning, messsage);
@@ -172,7 +177,7 @@ struct BadAccessGuardDestroy
 	BA_GUARD_FORCE_INLINE BadAccessGuardDestroy(BadAccessGuardShadow& shadow)
 		: shadow(shadow)
 	{
-		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_U64(shadow.stateAndInStackAddr);
+		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
 		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle)
 		{
 			OnBadAccess(lastSeenOp, BAGuard_Writing);

@@ -8,10 +8,6 @@
 
 #if BAD_ACCESS_GUARDS_ENABLE
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-
 // Per OS thread information retrieval
 using ThreadDescBuffer = char[512];
 
@@ -198,7 +194,7 @@ bool DefaultReportBadAccess(StateAndStackAddr previousOperation, BadAccessGuardS
 			ThreadDescBuffer outDescription;
 			uint64_t otherThreadId = FindThreadWithPtrInStack(BadAccessGuardShadow::GetInStackAddr(previousOperation), outDescription);
 			return BadAccessGuardReport(assertionOrWarning,
-				"Race condition: Multiple threads are reading/writing to the data at the same time, potentially corrupting it!\n- Other thread: %s (Desc=%s Id=%u)\n- This thread %s.",
+				"Race condition: Multiple threads are reading/writing to the data at the same time, potentially corrupting it!\n- Other thread: %s (Desc=%s Id=%llu)\n- This thread: %s.",
 				stateToStr[previousState],
 				outDescription[0] != '\0' ? outDescription : "<Unknown>",
 				otherThreadId,
@@ -225,6 +221,8 @@ void BA_GUARD_NO_INLINE OnBadAccess(StateAndStackAddr previousOperation, BadAcce
 	if (assertionOrWarning && breakAllowed && gBadAccessGuardConfig.allowBreak && !gBadAccessGuardConfig.breakASAP)	BA_GUARD_DEBUGBREAK();
 }
 
+#include <stdio.h>
+#include <stdarg.h>
 bool BadAccessGuardReport(bool assertionOrWarning, const char* fmt, ...)
 {
 	va_list args;
