@@ -3,6 +3,8 @@
 
 
 // Very small example of implementation for a vector type with a reduced number of methods.
+// This is NOT the inteded way to use the library, ideally you would add the guards to the implementation of the container itself!
+// Here we are paying the cost of passing things around, especially in Debug builds.
 template<typename T>
 class ExampleGuardedVector
 {
