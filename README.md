@@ -20,6 +20,7 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
   - Adds only a few load/store/masks depending on the operations
   - Fast path (read) on windows is 2`mov`s+1`test`+`je`
   - Debug builds were given love
+  - See [Benchmarks](#Benchmarks)
 - No false positives that you wouldn't want to fix
 - Provide details as accurate as possible
   - We detect if the access was done from another thread, and for platforms that allow it (Windows), print its information. We also give what kind of operation it was executing.
