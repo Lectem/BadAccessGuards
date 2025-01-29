@@ -42,6 +42,18 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
   - If you want this to be supported by `std::` containers, ask your implementer to add this technique to their implementation
   - Perhaps someone could make another repository with wrappers for the `std::` containers ?
 
+# Usage
+
+1. Declare the shadow memory that will hold the state and pointer to stack with `BA_GUARD_DECL(varname)`
+2. For all (relevant) read operations of the container/object, use the scope guard `BA_GUARD_READ(varname)`
+3. For all (relevant) write operations of the container/object, use the scope guard `BA_GUARD_WRITE(varname)`. But only if it always writes!
+4. Add `BA_GUARD_DESTROY(varname)` at the beginning of the destructor
+5. Enjoy!
+
+# Examples
+
+Examples are available in [./examples].
+
 # How does it work?
 
 The idea is based on the following observation:
@@ -118,14 +130,6 @@ So we only need to drop the lowest 2 bits of the pointer and store the state the
 > On *Windows*, all stacks are paged aligned (4kB). So we can actually drop the 8 lower bits. This way to get the state the compiler only needs to load a byte instead of masking with `0b11`. 
 
 As for how to obtain our pointer to the current stack... we use intrinsics (see `BA_GUARD_GET_PTR_IN_STACK`), but in theory we could use the address of any variable on the stack (but would then need to make sure the compiler does not optimize it). This is a single `mov` instructions on all platforms.
-
-# Usage
-
-1. Declare the shadow memory that will hold the state and pointer to stack with `BA_GUARD_DECL(varname)`
-2. For all (relevant) read operations of the container/object, use the scope guard `BA_GUARD_READ(varname)`
-3. For all (relevant) write operations of the container/object, use the scope guard `BA_GUARD_WRITE(varname)`. But only if it always writes!
-4. Add `BA_GUARD_DESTROY(varname)` at the beginning of the destructor
-5. Enjoy!
 
 # Benchmarks
 
