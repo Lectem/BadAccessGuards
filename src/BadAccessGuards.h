@@ -1,8 +1,13 @@
 ﻿#pragma once
 
 // TODO: documentation
-#ifndef BAD_ACCESS_GUARDS_ENABLE
-#define BAD_ACCESS_GUARDS_ENABLE 1
+
+#if !defined(BAD_ACCESS_GUARDS_ENABLE)
+# if defined(NDEBUG)
+#  define BAD_ACCESS_GUARDS_ENABLE 0
+# else
+#  define BAD_ACCESS_GUARDS_ENABLE 1
+# endif
 #endif
 
 #if BAD_ACCESS_GUARDS_ENABLE
