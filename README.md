@@ -27,7 +27,7 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 - No dependencies other than your compiler*
   - *And your platform threading libraries (non-mandatory)
   - *Does include the C standard library <stdint.h> for uint64_t and uintptr_t, and <stdarg.h> + <stdio.h> for the default `BadAccessGuardReport` function. (easily removed)
-- Easy to enable/disable with a single macro: `BAD_ACCESS_GUARDS_ENABLE=0/1` 
+- Easy to enable/disable with a single macro: `BAD_ACCESS_GUARDS_ENABLE=0/1`. By default disabled if `defined(NDEBUG)`.
 - Battle-tested: Used on projects with 200+ people running the applications/games daily.
 
 # Non-goals/Will not implement
@@ -126,6 +126,130 @@ As for how to obtain our pointer to the current stack... we use intrinsics (see 
 3. For all (relevant) write operations of the container/object, use the scope guard `BA_GUARD_WRITE(varname)`. But only if it always writes!
 4. Add `BA_GUARD_DESTROY(varname)` at the beginning of the destructor
 5. Enjoy!
+
+# Benchmarks
+
+## Setup
+
+- CPU: AMD Ryzen 7 7745HX.
+- RAM settings : 5200MT/s, timings 38-38-38-75, 2channels
+- CPU was stabilized at a fixed frequency of 3.49Ghz, frequency boost is disabled.
+- x64 MSVC 19.39.33523.0
+- Compilation flags `/EHsc /O2 /Ob1 /DNDEBUG -MD` (CMake Release)
+
+Simple benchmarks were done using `std::vector<>::push_back`. 
+Memory is reserved upfront, and vector emptied at each iteration, unless ` - noreserve` is mentionned, which means we freed memory after clearing. `complexityN` is the number of elements pushed per iteration.
+See [./benchmarks/BenchGuardedVectorExample.cpp](./benchmarks/BenchGuardedVectorExample.cpp).
+
+As usual for microbenchmarks, take them with a grain of salt.
+
+## Results
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t
+|------------:|--------------------:|--------------------:|--------:|----------:|:-------------------
+|       1 000 |            1 498.09 |          667 517.66 |    0.3% |      1.21 | `std::vector.push_back`
+|     100 000 |          146 447.45 |            6 828.39 |    0.3% |      1.21 | `std::vector.push_back`
+|  10 000 000 |       14 348 928.57 |               69.69 |    0.3% |      1.19 | `std::vector.push_back`
+|       1 000 |            2 293.63 |          435 990.29 |    0.2% |      1.21 | `guardedvector.push_back`
+|     100 000 |          226 570.78 |            4 413.63 |    0.1% |      1.21 | `guardedvector.push_back`
+|  10 000 000 |       22 766 900.00 |               43.92 |    0.1% |      1.21 | `guardedvector.push_back`
+|       1 000 |            3 736.86 |          267 604.40 |    0.0% |      1.22 | `std::vector.push_back - noreserve`
+|     100 000 |          574 648.40 |            1 740.19 |    2.8% |      1.18 | `std::vector.push_back - noreserve`
+|  10 000 000 |       57 675 900.00 |               17.34 |    0.7% |      1.28 | `std::vector.push_back - noreserve`
+|       1 000 |            4 664.21 |          214 398.66 |    0.1% |      1.22 | `guardedvector.push_back - noreserve`
+|     100 000 |          619 740.62 |            1 613.58 |    1.0% |      1.20 | `guardedvector.push_back - noreserve`
+|  10 000 000 |       70 195 650.00 |               14.25 |    0.8% |      1.20 | `guardedvector.push_back - noreserve`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*2
+|------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
+|       1 000 |            6 492.72 |          154 018.73 |    0.0% |      1.21 | `std::vector.push_back`
+|     100 000 |          654 289.33 |            1 528.38 |    0.1% |      1.21 | `std::vector.push_back`
+|  10 000 000 |       65 633 200.00 |               15.24 |    0.1% |      1.26 | `std::vector.push_back`
+|       1 000 |            6 793.21 |          147 205.81 |    0.2% |      1.16 | `guardedvector.push_back`
+|     100 000 |          682 157.71 |            1 465.94 |    0.3% |      1.16 | `guardedvector.push_back`
+|  10 000 000 |       68 398 600.00 |               14.62 |    0.3% |      1.18 | `guardedvector.push_back`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*4
+|------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
+|       1 000 |            6 851.06 |          145 962.77 |    0.2% |      1.16 | `std::vector.push_back`
+|     100 000 |          690 423.49 |            1 448.39 |    0.3% |      1.16 | `std::vector.push_back`
+|  10 000 000 |       69 002 200.00 |               14.49 |    0.0% |      1.07 | `std::vector.push_back`
+|       1 000 |            7 100.45 |          140 836.21 |    0.1% |      1.16 | `guardedvector.push_back`
+|     100 000 |          708 413.66 |            1 411.60 |    0.3% |      1.17 | `guardedvector.push_back`
+|  10 000 000 |       71 019 850.00 |               14.08 |    0.4% |      1.03 | `guardedvector.push_back`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of std::string
+|------------:|--------------------:|--------------------:|--------:|----------:|:----------------------
+|       1 000 |            8 266.19 |          120 974.73 |    0.2% |      1.18 | `std::vector.push_back`
+|     100 000 |          830 414.73 |            1 204.22 |    0.3% |      1.17 | `std::vector.push_back`
+|  10 000 000 |       87 094 900.00 |               11.48 |    0.5% |      0.99 | `std::vector.push_back`
+|       1 000 |            8 949.99 |          111 731.94 |    0.2% |      1.18 | `guardedvector.push_back`
+|     100 000 |          896 651.75 |            1 115.26 |    0.1% |      1.18 | `guardedvector.push_back`
+|  10 000 000 |       93 334 900.00 |               10.71 |    0.6% |      1.07 | `guardedvector.push_back`
+
+
+## Debug builds results
+
+### MSVC
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t
+|------------:|--------------------:|--------------------:|--------:|----------:|:-------------------
+|       1,000 |           54,356.00 |           18,397.23 |    1.0% |      1.22 | `std::vector.push_back`
+|       1,000 |           79,227.80 |           12,621.83 |    0.6% |      1.18 | `guardedvector.push_back`
+|       1,000 |           61,640.47 |           16,223.11 |    0.4% |      1.20 | `std::vector.push_back - noreserve`
+|       1,000 |           86,706.80 |           11,533.12 |    0.2% |      1.18 | `guardedvector.push_back - noreserve`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*2
+|------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
+|       1,000 |           63,399.51 |           15,772.99 |    0.2% |      1.21 | `std::vector.push_back`
+|       1,000 |           89,424.91 |           11,182.57 |    0.0% |      1.18 | `guardedvector.push_back`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*4
+|------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
+|       1,000 |           62,921.89 |           15,892.72 |    0.1% |      1.21 | `std::vector.push_back`
+|       1,000 |           89,699.48 |           11,148.34 |    0.1% |      1.18 | `guardedvector.push_back`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of std::string
+|------------:|--------------------:|--------------------:|--------:|----------:|:----------------------
+|       1,000 |          857,119.17 |            1,166.70 |    0.2% |      1.18 | `std::vector.push_back`
+|       1,000 |          886,639.00 |            1,127.85 |    0.3% |      1.18 | `guardedvector.push_back`
+
+### Clang
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t
+|------------:|--------------------:|--------------------:|--------:|----------:|:-------------------
+|       1,000 |           33,303.38 |           30,026.98 |    2.0% |      1.19 | `std::vector.push_back`
+|       1,000 |           41,738.43 |           23,958.74 |    0.4% |      1.21 | `guardedvector.push_back`
+|       1,000 |           41,306.50 |           24,209.27 |    0.4% |      1.20 | `std::vector.push_back - noreserve`
+|       1,000 |           48,123.36 |           20,779.93 |    0.2% |      1.21 | `guardedvector.push_back - noreserve`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*2
+|------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
+|       1,000 |           36,834.00 |           27,148.83 |    0.1% |      1.21 | `std::vector.push_back`
+|       1,000 |           43,873.63 |           22,792.73 |    0.0% |      1.21 | `guardedvector.push_back`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*4
+|------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
+|       1,000 |           38,554.45 |           25,937.34 |    0.1% |      1.21 | `std::vector.push_back`
+|       1,000 |           45,403.33 |           22,024.82 |    0.0% |      1.21 | `guardedvector.push_back`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of std::string
+|------------:|--------------------:|--------------------:|--------:|----------:|:----------------------
+|       1,000 |          720,847.17 |            1,387.26 |    0.4% |      1.17 | `std::vector.push_back`
+|       1,000 |          729,534.81 |            1,370.74 |    0.3% |      1.17 | `guardedvector.push_back`
+
+## Quick recap
+
+- vector<uint64_t> => +50% overhead
+- vector<uint64_t> - noreserve => ~10-25% overhead, depends on the growth strategy
+- vector<uint64_t*2> => 5% overhead
+- vector<uint64_t*4> => 3% overhead
+- vector<empty std::string> => 7%overhead
+
+This seems to be a totally acceptable overhead most cases given the chances it has to detect issues.
+Any object containing the equivalent of two pointers will most likely see only a small decrease in performance for `push_back`.
+
+In debug builds the base overhead of the debug mode for `std::vector` is so bad anyway (especially for non trivial types), that you might as well just go ahead and use the guards.
 
 # LICENSE
 
