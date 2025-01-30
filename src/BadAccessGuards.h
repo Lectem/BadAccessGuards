@@ -23,7 +23,7 @@
 #if defined(_MSC_VER) // MSVC
 # include <intrin.h> // Necessary for _AddressOfReturnAddress
 # define BA_GUARD_NO_INLINE __declspec(noinline)
-# define BA_GUARD_FORCE_INLINE __forceinline // Need to use /d2Obforceinline for MSVC 17.7+ debug builds, otherwise it doesnt work!
+# define BA_GUARD_FORCE_INLINE __forceinline // Need to use /d2Obforceinline for MSVC 17.7+ debug builds, otherwise it doesnt work! Not compatible with /Od...
 # define BA_GUARD_GET_PTR_IN_STACK() _AddressOfReturnAddress()
 # ifdef _WIN64 // 64 bits
 #  define BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(var) static_cast<uintptr_t>(__iso_volatile_load64(reinterpret_cast<volatile int64_t*>(&var)))
