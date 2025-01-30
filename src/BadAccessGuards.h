@@ -59,6 +59,14 @@
 # error "Unknown compiler"
 #endif
 
+// Does not seem to have much impact on performance in simple benchmarks, but might as well use it.
+#if defined(__has_cpp_attribute) && __has_cpp_attribute(unlikely) >= 201803L
+# define BA_GUARD_UNLIKELY [[unlikely]]
+#else
+# define BA_GUARD_UNLIKELY
+#endif
+
+
 enum BadAccessGuardState : uintptr_t
 {
 	BAGuard_ReadingOrIdle = 0,
@@ -107,7 +115,7 @@ struct BadAccessGuardRead
 	BA_GUARD_FORCE_INLINE BadAccessGuardRead(BadAccessGuardShadow& shadow)
 	{
 		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
-		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) // Early out on fast path
+		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) BA_GUARD_UNLIKELY // Early out on fast path
 		{
 			OnBadAccess(lastSeenOp, BAGuard_ReadingOrIdle);
 		}
@@ -115,7 +123,7 @@ struct BadAccessGuardRead
 	BA_GUARD_FORCE_INLINE BadAccessGuardRead(BadAccessGuardShadow& shadow, bool assertionOrWarning, char* message)
 	{
 		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
-		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) // Early out on fast path
+		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) BA_GUARD_UNLIKELY// Early out on fast path
 		{
 			OnBadAccess(lastSeenOp, BAGuard_ReadingOrIdle, assertionOrWarning, message);
 		}
@@ -130,7 +138,7 @@ struct BadAccessGuardWrite
 		: shadow(shadow)
 	{
 		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
-		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle)
+		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) BA_GUARD_UNLIKELY
 		{
 			OnBadAccess(lastSeenOp, BAGuard_Writing);
 		}
@@ -139,7 +147,7 @@ struct BadAccessGuardWrite
 	BA_GUARD_FORCE_INLINE ~BadAccessGuardWrite()
 	{
 		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
-		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_Writing)
+		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_Writing) BA_GUARD_UNLIKELY
 		{
 			OnBadAccess(lastSeenOp, BAGuard_Writing);
 		}
@@ -159,7 +167,7 @@ struct BadAccessGuardWriteEx
 		, assertionOrWarning(assertionOrWarning)
 	{
 		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
-		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle)
+		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) BA_GUARD_UNLIKELY
 		{
 			OnBadAccess(lastSeenOp, BAGuard_Writing, assertionOrWarning, messsage);
 		}
@@ -168,7 +176,7 @@ struct BadAccessGuardWriteEx
 	BA_GUARD_FORCE_INLINE ~BadAccessGuardWriteEx()
 	{
 		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
-		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_Writing)
+		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_Writing) BA_GUARD_UNLIKELY
 		{
 			OnBadAccess(lastSeenOp, BAGuard_Writing, assertionOrWarning, messsage);
 		}
@@ -183,7 +191,7 @@ struct BadAccessGuardDestroy
 		: shadow(shadow)
 	{
 		const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
-		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle)
+		if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) BA_GUARD_UNLIKELY
 		{
 			OnBadAccess(lastSeenOp, BAGuard_Writing);
 		}
