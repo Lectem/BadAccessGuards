@@ -39,9 +39,19 @@ public:
 		super::push_back(val);
 	}
 
+
+	void push_back_noguard(const T& val) {
+		super::push_back(val);
+	}
+
 	void push_back(T&& val)
 	{
 		BA_GUARD_WRITE(BAShadow);
+		super::push_back(std::move(val));
+	}
+
+	void push_back_noguard(T&& val)
+	{
 		super::push_back(std::move(val));
 	}
 
@@ -56,25 +66,25 @@ public:
 		return super::data();
 	}
 
-	size_t size() const
+	typename super::size_type size() const
 	{
 		BA_GUARD_READ(BAShadow);
 		return super::size();
 	}
 
-	size_t capacity() const
+	typename super::size_type capacity() const
 	{
 		BA_GUARD_READ(BAShadow);
 		return super::capacity();
 	}
 
-	void resize(size_t newSize)
+	void resize(typename super::size_type newSize)
 	{
 		BA_GUARD_WRITE(BAShadow);
 		super::resize(newSize);
 	}
 
-	void reserve(size_t newCapacity)
+	void reserve(typename super::size_type newCapacity)
 	{
 		BA_GUARD_WRITE(BAShadow);
 		super::reserve(newCapacity);
@@ -92,17 +102,17 @@ public:
 		super::clear();
 	}
 
-	T& operator[](size_t index) noexcept
+	T& operator[](const typename super::size_type index) noexcept
 	{
 		// We can't know whether it is used as read only or wrote to, accept the limitation and err on the conservative size
 		BA_GUARD_READ(BAShadow);
-		return impl[index];
+		return super::operator[](index);
 	}
 	
-	const T& operator[](size_t index) const noexcept
+	const T& operator[](const typename super::size_type  index) const noexcept
 	{
 		BA_GUARD_READ(BAShadow);
-		return impl[index];
+		return super::operator[](index);
 	}
 
 	// Note our iterators return pointers directly but could return objects.
