@@ -29,7 +29,7 @@ struct RecursiveBehaviour {
 
 int main()
 {
-#ifndef BAD_ACCESS_GUARDS_ENABLE
+#if !BAD_ACCESS_GUARDS_ENABLE
 #error "Can't really test the guards if we don't enable them can we ?"
 #endif
 

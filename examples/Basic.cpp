@@ -8,7 +8,7 @@
 
 int main()
 {
-#ifdef BAD_ACCESS_GUARDS_ENABLE
+#if BAD_ACCESS_GUARDS_ENABLE
 	// Don't break for this sample as the race condition is controlled and won't trigger a crash, so we'll just be printing!
 	BadAccessGuardSetConfig({
 			false, // allowBreak

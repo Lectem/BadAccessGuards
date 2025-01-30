@@ -12,6 +12,7 @@ endif()
 
 option(BAGUARDS_EXAMPLES "Build the examples" ${BAGUARDS_IS_ROOT_PROJECT})
 option(BAGUARDS_BENCH "Build the benchmarks" ${BAGUARDS_IS_ROOT_PROJECT})
+option(BAGUARDS_FORCE_ENABLE "Build with BAD_ACCESS_GUARDS_ENABLE=1 defined." ${BAGUARDS_IS_ROOT_PROJECT})
 
 
 add_library(BadAccessGuards 
@@ -19,6 +20,10 @@ add_library(BadAccessGuards
 	src/BadAccessGuards.h
 )
 target_include_directories(BadAccessGuards INTERFACE src)
+
+if(BAGUARDS_FORCE_ENABLE)
+	target_compile_definitions(BadAccessGuards PUBLIC BAD_ACCESS_GUARDS_ENABLE=1)
+endif()
 
 if(BAGUARDS_EXAMPLES)
 	add_executable(BasicExample examples/Basic.cpp)
