@@ -131,6 +131,7 @@ int main() {
 	struct PayloadString {
 		PayloadString(uint64_t v) {
 			(void)v;
+			storage += char(v);
 		}
 		std::string storage;
 	};
