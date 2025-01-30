@@ -36,6 +36,26 @@ int BenchVector(ankerl::nanobench::Bench& bench, bool withNoReserve)
 		}
 	}
 
+#ifndef NDEBUG // Only gives different perf in debug builds
+	{
+		ExampleGuardedVector<T> guardedvector;
+		for (size_t size : nbPushBacksPerIteration)
+		{
+			guardedvector.reserve(size); // Don't measure allocator
+			bench.complexityN(size)
+				.minEpochTime(minEpoch)
+				.run("guardedvector.push_back_noguard", [&] {
+				for (int i = 0; i < size; i++)
+				{
+					// This is benched to demonstrate that the guard is not much more expensive thant a simple forwarding call in debug...
+					guardedvector.push_back_noguard({ x });
+				}
+				ankerl::nanobench::doNotOptimizeAway(x += guardedvector.size());
+				guardedvector.clear();
+					});
+		}
+	}
+#endif
 	{
 		ExampleGuardedVector<T> guardedvector;
 		for (size_t size : nbPushBacksPerIteration)
