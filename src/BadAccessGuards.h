@@ -232,9 +232,9 @@ void BadAccessGuardSetConfig(BadAccessGuardConfig config);
 
 #define BA_GUARD_DECL(SHADOWNAME)
 #define BA_GUARD_READ(SHADOWNAME)								do {} while(false)
-#define BA_GUARD_READ_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)	do {} while(false)
+#define BA_GUARD_READ_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)		do {} while(false)
 #define BA_GUARD_WRITE(SHADOWNAME)								do {} while(false)
 #define BA_GUARD_WRITE_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)	do {} while(false)
-#define BA_GUARD_DESTROY(SHADOWNAME)								do {} while(false)
+#define BA_GUARD_DESTROY(SHADOWNAME)							do {} while(false)
 
 #endif // BAD_ACCESS_GUARDS_ENABLE
