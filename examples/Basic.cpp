@@ -25,7 +25,7 @@ int main()
 	// In the real world, freeing memory won't always (and most often don't) release the memory pages, so it is still accessible
 	// Here we keep the backing memory (shadowAlignedStorage) alive for the duration of the test, even though we destroy the actual object earlier.
 	// This is actually not really needed for the test, but simulates what would happen with real objects.
-	std::aligned_storage_t<sizeof(BadAccessGuardShadow), alignof(BadAccessGuardShadow)> shadowAlignedStorage;
+	alignas(BadAccessGuardShadow) char shadowAlignedStorage[sizeof(BadAccessGuardShadow)];
 
 	// Create the shadow object in the aligned storage
 	BadAccessGuardShadow* shadowPtr = new (&shadowAlignedStorage) BadAccessGuardShadow;
