@@ -20,7 +20,7 @@ add_library(BadAccessGuards
 	src/BadAccessGuards.h
 )
 target_include_directories(BadAccessGuards INTERFACE src)
-target_compile_features(BadAccessGuards PUBLIC cxx_std_14)
+target_compile_features(BadAccessGuards PUBLIC cxx_std_11)
 
 if(BAGUARDS_FORCE_ENABLE)
 	target_compile_definitions(BadAccessGuards PUBLIC BAD_ACCESS_GUARDS_ENABLE=1)
@@ -29,9 +29,11 @@ endif()
 if(BAGUARDS_EXAMPLES)
 	add_executable(BasicExample examples/Basic.cpp)
 	target_link_libraries(BasicExample PRIVATE BadAccessGuards)
+	target_compile_features(BasicExample PUBLIC cxx_std_14) # chrono_literals
 
 	add_executable(GuardedVectorExample examples/GuardedVectorExample.cpp examples/GuardedVectorExample.h)
 	target_link_libraries(GuardedVectorExample PRIVATE BadAccessGuards)
+	target_compile_features(GuardedVectorExample PUBLIC cxx_std_14) # chrono_literals
 endif()
 
 if(BAGUARDS_BENCH)

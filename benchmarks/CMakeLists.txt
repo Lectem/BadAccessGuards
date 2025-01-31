@@ -15,4 +15,5 @@ target_link_libraries(BenchGuardedVectorExample
         BadAccessGuards
         nanobench
 )
+target_compile_features(BenchGuardedVectorExample PUBLIC cxx_std_14) # chrono_literals
 
