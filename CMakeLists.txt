@@ -20,6 +20,7 @@ add_library(BadAccessGuards
 	src/BadAccessGuards.h
 )
 target_include_directories(BadAccessGuards INTERFACE src)
+target_compile_features(BadAccessGuards PUBLIC cxx_std_11)
 
 if(BAGUARDS_FORCE_ENABLE)
 	target_compile_definitions(BadAccessGuards PUBLIC BAD_ACCESS_GUARDS_ENABLE=1)
