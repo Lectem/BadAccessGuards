@@ -205,6 +205,9 @@ See [Benchmarks.md](Benchmarks.md)
 
 This seems to be a totally acceptable overhead in most cases given the chances it has to detect issues.  
 Any object containing the equivalent of two pointers will most likely see only a small decrease in performance for `push_back`.
+
+On games for which we tested the guards, less than 2% of regression in frame duration was observed. Which makes sense, since you do (should) not spend most of your time doing operations on containers.
+
 However, I would still recommand disabling the guards in production.
 
 
