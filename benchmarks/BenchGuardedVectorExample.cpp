@@ -1,4 +1,3 @@
-#define BAD_ACCESS_GUARDS_ENABLE 1
 #include "../examples/GuardedVectorExample.h"
 
 #include <nanobench.h>

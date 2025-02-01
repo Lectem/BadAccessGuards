@@ -8,12 +8,23 @@
 #endif
 #include <BadAccessGuards.h>
 
-int main()
+int main(int argv, char** argc)
 {
+	bool allowBreak = false;
+	if (argv >= 2 && !strcmp(argc[1], "--break"))
+	{
+		allowBreak = true;
+	}
+	else
+	{
+		printf("Run with `--break` to make this example break in the debugger.\n\n");
+	}
 #if BAD_ACCESS_GUARDS_ENABLE
 	// Don't break for this sample as the race condition is controlled and won't trigger a crash, so we'll just be printing!
+	
+
 	BadAccessGuardSetConfig({
-			false, // allowBreak
+			allowBreak, // allowBreak
 			false, // breakASAP
 		});
 #else

@@ -206,7 +206,7 @@ bool DefaultReportBadAccess(StateAndStackAddr previousOperation, BadAccessGuardS
 	}
 }
 
-void BA_GUARD_NO_INLINE OnBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message)
+void BA_GUARD_NO_INLINE BAGuardOnBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message)
 {
 	// If you break here it means that we detected some bad memory access pattern
 	// It could be that you are mutating a container recursively or a multi-threading race condition

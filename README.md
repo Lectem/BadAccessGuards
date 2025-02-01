@@ -7,14 +7,21 @@ This library makes it possible to detect most race conditions involving (but not
 
 As a bonus, we also get detection of memory use-after-free and corruption for free. This also detects recursive operations which are often dangerous in containers.
 
+# Who is this for ?
+
+- Container/library implementers
+- Teams working on real-time projects
+- Teams working with concurrency a lot
+  - Especially with frequent on-boarding newcomers
+
 # Goals/Features
 
 - Easy to integrate and modify for your project
-  - There are only two files: the BadAccessGuards.h and BadAccessGuards.cpp
+  - There are only two files: the `BadAccessGuards.h` and `BadAccessGuards.cpp`
   - Licensed under the [Unlicence](LICENSE), you can just copy it without worrying about legal.
   - It does not include the C++ standard library, and can thus be used in your std-free libraries (or even for a standard library implementation!)
   - Small, there are only a few platform specific functions to implement
-  - Supports MSVC, GCC and clang.
+  - Supports MSVC, GCC and Clang.
 - Detect race conditions with minimal performance impact
   - You want to be able to run this in your day to day development builds
   - Adds only a few load/store/masks depending on the operations
@@ -27,18 +34,18 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
   - Break as early as possible to hopefully be able to inspect the other threads in the debugger.
 - No dependencies other than your compiler*
   - *And your platform threading libraries (non-mandatory)
-  - *Does include the C standard library <stdint.h> for uint64_t and uintptr_t, and <stdarg.h> + <stdio.h> for the default `BadAccessGuardReport` function. (easily removed)
+  - *Does include the C standard library <stdint.h> for `uint64_t` and `uintptr_t`, and <stdarg.h> + <stdio.h> for the default `BadAccessGuardReport` function. (easily removed)
 - Easy to enable/disable with a single macro: `BAD_ACCESS_GUARDS_ENABLE=0/1`. By default disabled if `defined(NDEBUG)`.
 - Battle-tested: Used on projects with 200+ people running the applications/games daily.
 
 # Non-goals/Will not implement
 - Detect every single race condition without code change
-  - This is not the objective of this library, you would use thread sanitizer, valgrind or other tools for that
-  - Some access patterns are not detected on purpose for performance
+  - This is not the objective of this library, you would use thread sanitizer, valgrind or other tools for that. **This is not a substitute for proper design, test, and usage of sanitizers** but rather another tool in the box.
+  - Some access patterns are not detected on purpose for performance.
 - Detect lock-free containers issues.
   - This method cannot (unless proven otherwise) work where read/writes need to be considered atomic
 - Support every platform in existance.
-  - Except for the major ones, we depend on making it easier for the user to add their own rather than implement them all.
+  - Rather than implementing them all, major ones are provided. Adding your own was made easy.
 - Providing hardened versions of the `std::` containers.
   - If you want this to be supported by `std::` containers, ask your implementer to add this technique to their implementation
   - Perhaps someone could make another repository with wrappers for the `std::` containers ?
@@ -54,18 +61,34 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 
 # Examples
 
-Examples are available in [./examples].
+Examples are available in [./examples](./examples).
+
+## Sample output:
+
+> Run with `--break` to make this example break in the debugger.
+>
+>
+> Testing read during write on the same thread, output:
+> Recursion detected: This may lead to invalid operations
+> - Parent operation: Writing.
+> - This operation: Reading.
+> 
+> 
+> Testing read during write on different threads, output:
+> Race condition: Multiple threads are reading/writing to the data at the same time, potentially corrupting it!
+> - Other thread: Writing (Desc=ØUnsafe WriterØ Id=18084)
+> - This thread: Reading.
 
 # How does it work?
 
 The idea is based on the following observation:
 
-> You do not need to catch all occurences of a race condition, catching it once should be enough when you run the code often and have enough information to locate the issue.
+> You do not need to catch all occurences of a race condition, catching it once should be enough when the code runs often and provides enough information to locate the issue.
 
 Indeed, (especially in big teams), your code will be run hundred if not thousands of times by your developpers.  
-So even if you have 10% of chance to catch the issue with useful details, it is better than 1% chance and not crashing or sometimes way later in the execution of the program. 
+So even if you have 10% of chance to catch the issue with useful details, it is better than 1% chance and not crashing or detecting it way later in the execution of the program. 
 
-Even if detected late, it is better than not being detected at all. And better than having people run sanitizer once every moon eclipse, or only on small unit tests, or worse, never.
+The point is that it is better than not being detected at all. And better than having people run sanitizers once every moon eclipse, or only on small unit tests, or worse, never.
 
 ## Detection
 
@@ -75,11 +98,22 @@ So our objective is to detect race conditions, as fast as possible. And we do no
 
 We have 3 possible access states for a given object:
 
+```mermaid
+stateDiagram-v2
+direction LR
+IdleRead: Idle/Read
+    [*]-->IdleRead
+    IdleRead-->Write
+    Write-->IdleRead
+    IdleRead-->Destroyed
+    Destroyed-->[*]
+```
+
 - **Idle / Read**: We're either reading the object or not using it at all. These two states are merged because you do not want your reads to be costly!
 - **Write**: We're mutating the object. As soon as we are done, we go back to the **Idle** state.
 - **Destroy**: The object has been destroyed (or freed), and should not be used anymore.
 
-And there's an implicit one: **Corrupted**, if we see value not in the list above.
+And there's an implicit one: **Corrupted**, if we see a value not in the list above.
 
 ### Access states transitions
 
