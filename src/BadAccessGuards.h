@@ -171,7 +171,7 @@ struct BadAccessGuardWriteEx
 		{
 			BAGuardOnBadAccess(lastSeenOp, BAGuard_Writing, assertionOrWarning, messsage);
 		}
-		shadow.SetStateAtomicRelaxed(BAGuard_ReadingOrIdle); // Always write, may trigger on other thread too
+		shadow.SetStateAtomicRelaxed(BAGuard_Writing); // Always write, may trigger on other thread too
 	}
 	BA_GUARD_FORCE_INLINE ~BadAccessGuardWriteEx()
 	{
