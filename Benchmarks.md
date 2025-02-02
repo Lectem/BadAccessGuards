@@ -224,6 +224,7 @@ As usual for microbenchmarks, take them with a grain of salt.
 ### MSVC 19.42.34436.0 `/d2Obforceinline /RTC1`
 
 > Note:  NOT `/Od` since it even disables /d2Obforceinline... You should probably be using at least /O1 anyway.
+
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t
 |------------:|--------------------:|--------------------:|--------:|----------:|:-------------------
 |       1,000 |           55,695.84 |           17,954.66 |    0.3% |      1.21 | `std::vector.push_back`
@@ -281,6 +282,7 @@ As usual for microbenchmarks, take them with a grain of salt.
 |       1,000 |           49,608.16 |           20,157.97 |    0.2% |      1.22 | `guardedvector.push_back`
 
 ### Clang 14.0.6 WSL `-g -Og`
+
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t
 |------------:|--------------------:|--------------------:|--------:|----------:|:-------------------
 |       1,000 |            1,370.84 |          729,480.18 |    0.1% |      1.21 | `std::vector.push_back`
