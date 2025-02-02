@@ -26,7 +26,7 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 - Detect race conditions with minimal performance impact
   - You want to be able to run this in your day-to-day development builds
   - Adds only a few load/store/masks depending on the operations
-  - Fast path (read) on Windows is 2`mov`s + 1`test` + `je`
+  - Fast path (read) on *Windows* is 2`mov`s + 1`test` + `je`
   - Debug builds were given love
   - See [Benchmarks](#Benchmarks)
 - No false positives that you wouldn't want to fix
@@ -154,6 +154,7 @@ The next best option is the one we implement: send an interrupt for the debugger
   - This is necessary to know if the issue is recursion or a race condition
   - We could have used the thread ID, but this is slow to get. (and again, we want this to be fast). Instead, simply store the stack pointer. This is enough to identify a thread!
     - And if you are using fibers, well, you actually get fiber detection for free too, assuming you keep them around a bit and can list them.
+    - Right now, looking up what thread stack contains the pointer is not implemented on *Linux* (because the OS provides no way to do this, would have to hook `pthread` for example), nor on *MacOS* (though it is possible and comments on how to do it are in the source). We can however still determine if the issue is a recursion or race condition.
 
 ## Keeping it fast and lightweight
 
