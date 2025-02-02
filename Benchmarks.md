@@ -196,59 +196,60 @@ As usual for microbenchmarks, take them with a grain of salt.
 
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t
 |------------:|--------------------:|--------------------:|--------:|----------:|:-------------------
-|       1,000 |           54,936.76 |           18,202.75 |    0.8% |      1.21 | `std::vector.push_back`
-|       1,000 |           55,363.05 |           18,062.59 |    0.4% |      1.21 | `guardedvector.push_back_noguard`
-|       1,000 |           78,639.80 |           12,716.21 |    0.1% |      1.17 | `guardedvector.push_back`
-|       1,000 |           62,009.73 |           16,126.50 |    0.2% |      1.21 | `std::vector.push_back - noreserve`
-|       1,000 |           85,885.19 |           11,643.45 |    0.4% |      1.18 | `guardedvector.push_back - noreserve`
+|       1,000 |           53,578.34 |           18,664.26 |    0.1% |      1.21 | `std::vector.push_back`
+|       1,000 |           54,655.18 |           18,296.53 |    0.2% |      1.21 | `guardedvector.push_back_noguard`
+|       1,000 |           78,635.86 |           12,716.84 |    0.4% |      1.17 | `guardedvector.push_back`
+|       1,000 |           61,116.90 |           16,362.09 |    0.1% |      1.20 | `std::vector.push_back - noreserve`
+|       1,000 |           62,312.97 |           16,048.02 |    0.1% |      1.21 | `guardedvector.push_back_noguard - noreserve`
+|       1,000 |           85,988.50 |           11,629.46 |    0.0% |      1.18 | `guardedvector.push_back - noreserve`
 
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*2
 |------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
-|       1,000 |           63,070.99 |           15,855.15 |    0.1% |      1.21 | `std::vector.push_back`
-|       1,000 |           65,976.14 |           15,157.00 |    0.1% |      1.16 | `guardedvector.push_back_noguard`
-|       1,000 |           90,052.83 |           11,104.59 |    0.1% |      1.18 | `guardedvector.push_back`
+|       1,000 |           63,358.73 |           15,783.14 |    0.0% |      1.21 | `std::vector.push_back`
+|       1,000 |           66,385.34 |           15,063.57 |    0.0% |      1.21 | `guardedvector.push_back_noguard`
+|       1,000 |           90,441.90 |           11,056.82 |    0.1% |      1.18 | `guardedvector.push_back`
 
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*4
 |------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
-|       1,000 |           63,697.86 |           15,699.11 |    0.2% |      1.21 | `std::vector.push_back`
-|       1,000 |           66,965.40 |           14,933.08 |    0.1% |      1.16 | `guardedvector.push_back_noguard`
-|       1,000 |           90,108.84 |           11,097.69 |    0.2% |      1.18 | `guardedvector.push_back`
+|       1,000 |           62,788.88 |           15,926.39 |    0.1% |      1.21 | `std::vector.push_back`
+|       1,000 |           65,782.26 |           15,201.67 |    0.0% |      1.21 | `guardedvector.push_back_noguard`
+|       1,000 |           89,670.20 |           11,151.98 |    0.1% |      1.18 | `guardedvector.push_back`
 
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of std::string
 |------------:|--------------------:|--------------------:|--------:|----------:|:----------------------
-|       1,000 |          887,023.58 |            1,127.37 |    0.2% |      1.18 | `std::vector.push_back`
-|       1,000 |          881,930.77 |            1,133.88 |    0.3% |      1.19 | `guardedvector.push_back_noguard`
-|       1,000 |          899,152.07 |            1,112.16 |    0.2% |      1.18 | `guardedvector.push_back`
+|       1,000 |          892,186.67 |            1,120.84 |    0.0% |      1.18 | `std::vector.push_back`
+|       1,000 |          891,737.39 |            1,121.41 |    0.0% |      1.18 | `guardedvector.push_back_noguard`
+|       1,000 |          921,326.50 |            1,085.39 |    0.1% |      1.19 | `guardedvector.push_back`
 
 ### MSVC 19.42.34436.0 `/d2Obforceinline /RTC1`
 
 > Note:  NOT `/Od` since it even disables /d2Obforceinline... You should probably be using at least /O1 anyway.
-
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t
 |------------:|--------------------:|--------------------:|--------:|----------:|:-------------------
-|       1,000 |           53,764.96 |           18,599.48 |    0.2% |      1.21 | `std::vector.push_back`
-|       1,000 |           56,336.35 |           17,750.53 |    0.4% |      1.21 | `guardedvector.push_back_noguard`
-|       1,000 |           72,055.39 |           13,878.21 |    0.3% |      1.17 | `guardedvector.push_back`
-|       1,000 |           61,487.42 |           16,263.49 |    0.2% |      1.21 | `std::vector.push_back - noreserve`
-|       1,000 |           80,016.81 |           12,497.37 |    0.2% |      1.17 | `guardedvector.push_back - noreserve`
+|       1,000 |           55,695.84 |           17,954.66 |    0.3% |      1.21 | `std::vector.push_back`
+|       1,000 |           55,816.60 |           17,915.82 |    0.2% |      1.22 | `guardedvector.push_back_noguard`
+|       1,000 |           71,371.23 |           14,011.25 |    0.3% |      1.16 | `guardedvector.push_back`
+|       1,000 |           63,074.18 |           15,854.35 |    0.2% |      1.21 | `std::vector.push_back - noreserve`
+|       1,000 |           63,063.28 |           15,857.09 |    0.1% |      1.21 | `guardedvector.push_back_noguard - noreserve`
+|       1,000 |           78,940.42 |           12,667.78 |    0.1% |      1.17 | `guardedvector.push_back - noreserve`
 
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*2
 |------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
-|       1,000 |           64,622.19 |           15,474.56 |    0.2% |      1.21 | `std::vector.push_back`
-|       1,000 |           67,344.04 |           14,849.13 |    0.2% |      1.16 | `guardedvector.push_back_noguard`
-|       1,000 |           84,253.45 |           11,868.95 |    0.3% |      1.18 | `guardedvector.push_back`
+|       1,000 |           63,507.71 |           15,746.12 |    0.1% |      1.21 | `std::vector.push_back`
+|       1,000 |           66,471.69 |           15,044.00 |    0.1% |      1.21 | `guardedvector.push_back_noguard`
+|       1,000 |           83,548.44 |           11,969.10 |    0.1% |      1.18 | `guardedvector.push_back`
 
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*4
 |------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
-|       1,000 |           64,448.62 |           15,516.24 |    0.1% |      1.21 | `std::vector.push_back`
-|       1,000 |           67,466.37 |           14,822.20 |    0.3% |      1.16 | `guardedvector.push_back_noguard`
-|       1,000 |           83,747.55 |           11,940.65 |    0.2% |      1.18 | `guardedvector.push_back`
+|       1,000 |           63,555.23 |           15,734.35 |    0.2% |      1.21 | `std::vector.push_back`
+|       1,000 |           66,519.09 |           15,033.28 |    0.1% |      1.21 | `guardedvector.push_back_noguard`
+|       1,000 |           82,997.72 |           12,048.52 |    0.1% |      1.18 | `guardedvector.push_back`
 
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of std::string
 |------------:|--------------------:|--------------------:|--------:|----------:|:----------------------
-|       1,000 |          878,481.54 |            1,138.33 |    0.4% |      1.18 | `std::vector.push_back`
-|       1,000 |          881,314.52 |            1,134.67 |    0.2% |      1.18 | `guardedvector.push_back_noguard`
-|       1,000 |          892,364.35 |            1,120.62 |    0.2% |      1.18 | `guardedvector.push_back`
+|       1,000 |          881,261.21 |            1,134.74 |    0.0% |      1.18 | `std::vector.push_back`
+|       1,000 |          888,316.95 |            1,125.72 |    0.1% |      1.18 | `guardedvector.push_back_noguard`
+|       1,000 |          898,869.30 |            1,112.51 |    0.1% |      1.18 | `guardedvector.push_back`
 
 ### Clang 14.0.6 WSL `-g` (CMake Debug default)
 
