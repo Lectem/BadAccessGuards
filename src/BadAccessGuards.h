@@ -97,6 +97,8 @@ struct BadAccessGuardShadow
 	static constexpr int BadAccessStateBits = 8;
 	static_assert((1 << BadAccessStateBits) <= 4096, "The number of bits used for the state must be smaller than page alignment");
 #else
+	// Note: On 64bits platforms we could store the state in the upper byte instead, as in userspace the 12 upper bits are unused
+	//       Left as an exercise for the reader. 
 	static constexpr int BadAccessStateBits = 2;
 	static_assert((1<< BadAccessStateBits) <= alignof(uint32_t), "Assume the stack base and size are at most aligned to your CPU native alignement");
 #endif
