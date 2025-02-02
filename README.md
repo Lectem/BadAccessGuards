@@ -1,31 +1,31 @@
 # BadAccessGuards
 
-Finding race conditions and bad access patterns usually involves sanitizers or special programs such as valgrind.
-Those are however seldom ran because they can have a heavy runtime performance cost.
+Finding race conditions and bad access patterns usually involves sanitizers or special programs such as Valgrind.
+Those are however seldom run because they can have a heavy runtime performance cost.
 
 This library makes it possible to detect most race conditions involving (but not only) containers through their instrumentation, at a minimal runtime cost.
 
-As a bonus, we also get detection of memory use-after-free and corruption for free. This also detects recursive operations which are often dangerous in containers.
+As a bonus, we also get detection of memory use-after-free and corruption for free. This also detects recursive operations, which are often dangerous in containers.
 
-# Who is this for ?
+# Who is this for?
 
 - Container/library implementers
-- Teams working on real-time projects
+- Teams working on real-time/legacy projects
 - Teams working with concurrency a lot
-  - Especially with frequent on-boarding newcomers
+  - Especially with frequent onboarding of newcomers
 
 # Goals/Features
 
 - Easy to integrate and modify for your project
-  - There are only two files: the `BadAccessGuards.h` and `BadAccessGuards.cpp`
-  - Licensed under the [Unlicence](LICENSE), you can just copy it without worrying about legal.
+  - There are only two files: `BadAccessGuards.h` and `BadAccessGuards.cpp`
+  - Licensed under the [Unlicence](LICENSE), you can just copy/modify it without worrying about legal.
   - It does not include the C++ standard library, and can thus be used in your std-free libraries (or even for a standard library implementation!)
-  - Small, there are only a few platform specific functions to implement
+  - Small, there are only a few platform-specific functions to implement
   - Supports MSVC, GCC and Clang.
 - Detect race conditions with minimal performance impact
-  - You want to be able to run this in your day to day development builds
+  - You want to be able to run this in your day-to-day development builds
   - Adds only a few load/store/masks depending on the operations
-  - Fast path (read) on windows is 2`mov`s+1`test`+`je`
+  - Fast path (read) on Windows is 2`mov`s + 1`test` + `je`
   - Debug builds were given love
   - See [Benchmarks](#Benchmarks)
 - No false positives that you wouldn't want to fix
@@ -40,7 +40,7 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 
 # Non-goals/Will not implement
 - Detect every single race condition without code change
-  - This is not the objective of this library, you would use thread sanitizer, valgrind or other tools for that. **This is not a substitute for proper design, test, and usage of sanitizers** but rather another tool in the box.
+  - This is not the objective of this library, you would use ThreadSanitizer, Valgrind or other tools for that. **This is not a substitute for proper design, test, and usage of sanitizers** but rather another tool in the box.
   - Some access patterns are not detected on purpose for performance.
 - Detect lock-free containers issues.
   - This method cannot (unless proven otherwise) work where read/writes need to be considered atomic
@@ -48,7 +48,7 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
   - Rather than implementing them all, major ones are provided. Adding your own was made easy.
 - Providing hardened versions of the `std::` containers.
   - If you want this to be supported by `std::` containers, ask your implementer to add this technique to their implementation
-  - Perhaps someone could make another repository with wrappers for the `std::` containers ?
+  - Perhaps someone could make another repository with wrappers for the `std::` containers?
 
 # Usage
 
@@ -85,14 +85,14 @@ The idea is based on the following observation:
 
 > You do not need to catch all occurences of a race condition, catching it once should be enough when the code runs often and provides enough information to locate the issue.
 
-Indeed, (especially in big teams), your code will be run hundred if not thousands of times by your developpers.  
-So even if you have 10% of chance to catch the issue with useful details, it is better than 1% chance and not crashing or detecting it way later in the execution of the program. 
+Indeed, (especially in big teams), your code will be run hundreds, if not thousands, of times by your developers.  
+So even if you have a 10% chance to catch the issue with useful details, it is better than a 1% chance and not crashing or detecting it way later in the execution of the program. 
 
 The point is that it is better than not being detected at all. And better than having people run sanitizers once every moon eclipse, or only on small unit tests, or worse, never.
 
 ## Detection
 
-So our objective is to detect race conditions, as fast as possible. And we do not need 100% detection as long as developpers can afford to run their code with theses tests.
+So our objective is to detect race conditions, as fast as possible. And we do not need 100% detection as long as developers can afford to run their code with theses tests.
 
 ### Access states
 
@@ -128,12 +128,12 @@ Now that we have the above states, let's consider the following operations:
 
 That's it! Now all we need to do is to check those invariants. If the operations are executed on a single thread, those invariants cannot break.
 
-Which means that if the invariants do not hold, something bad happened!  
+Which means that if the invariants do not hold, something bad happened! 
 There are two options:
-- A race condition happened
-- Some kind of recursion happened
+- A race condition happened.
+- Some kind of recursion happened.
 
-And since we do not need a 100% error detection, these states changes do not need to be atomic. We just want to force the reads and writes of the state.  
+And since we do not need a 100% error detection, these state changes do not need to be atomic. We just want to force the reads and writes of the state.  
 **Remember:** the invariants can not break on a single thread except in the case of a recursion!
 
 > **Note:** We do not care about potential reorders of the operations by the compiler. It must honor the invariants from a single-thread point of view.  
@@ -146,7 +146,7 @@ The ideal situation would be to have all threads suspended as soon as the race c
 The next best option is the one we implement: send an interrupt for the debugger to break.
 
 - The sooner we break, the higher your chances of breaking with the other thread at the location responsible for the race condition. 
-  - So this one is simple, the first thing we do when detecting a problem is to break! (See `BadAccessGuardConfig::breakASAP`)
+  - This one is simple; the first thing we do when detecting a problem is to break! (See `BadAccessGuardConfig::breakASAP`)
   - The faster we can detect issues, the faster we can break. So we limit the cost of the detection.
 - If we break, we want to know what thread was involved in the bad access.
   - This is necessary to know if the issue is recursion or a race condition
@@ -165,18 +165,18 @@ So we only need to drop the lowest 2 bits of the pointer and store the state the
 
 > On *Windows*, all stacks are paged aligned (4kB). So we can actually drop the 8 lower bits. This way to get the state the compiler only needs to load a byte instead of masking with `0b11`. 
 
-As for how to obtain our pointer to the current stack... we use intrinsics (see `BA_GUARD_GET_PTR_IN_STACK`), but in theory we could use the address of any variable on the stack (but would then need to make sure the compiler does not optimize it). This is a single `mov` instructions on all platforms.
+As for how to obtain our pointer to the current stack... we use intrinsics (see `BA_GUARD_GET_PTR_IN_STACK`), but in theory we could use the address of any variable on the stack (but would then need to make sure the compiler does not optimize it). This is a single `mov` instruction on all platforms.
 
 # Benchmarks
 
 ## Setup
 
 - CPU: AMD Ryzen 7 7745HX.
-- RAM settings : 5200MT/s, timings 38-38-38-75, 2channels
+- RAM settings: 5200MT/s, timings 38-38-38-75, 2channels
 - CPU was stabilized at a fixed frequency of 3.49Ghz, frequency boost is disabled.
 
 Simple benchmarks were done using `std::vector<>::push_back` since it uses the most expensive guard (write access). 
-Memory is reserved upfront, and vector emptied at each iteration, unless ` - noreserve` is mentionned, which means we freed memory after clearing. `complexityN` is the number of elements pushed per iteration.
+Memory is reserved upfront, and the vector is emptied at each iteration unless ` - noreserve` is mentionned, which means we freed memory after clearing. `complexityN` is the number of elements pushed per iteration.
 See [./benchmarks/BenchGuardedVectorExample.cpp](./benchmarks/BenchGuardedVectorExample.cpp).
 
 As usual for microbenchmarks, take them with a grain of salt.
@@ -193,22 +193,22 @@ See [Benchmarks.md](Benchmarks.md)
     - vector<uint64_t*2> => 5% overhead
     - vector<uint64_t*4> => 3% overhead
     - vector<std::string of 1 char> => 5-7%overhead
-    - clang Release `-O3` (but not `-O2`) seems to be the exception and shows a much bigger overhead for all types except `std::string`
+    - clang Release `-O3` (but not `-O2` nor GCC `-O3`) seems to be the exception and shows a much bigger overhead (+100% - +150%) for types other than `std::string`
         - It seems the guards defeat some kind of optimization here
         - Did not investigate why yet
 - Debug builds
     - In CMake Debug default configuration (MSVC `/Od` / clang without `-Og`)
         - Overhead is between 1% (MSVC std::string)  and 15% (the rest)
-        - The base overhead of the debug mode for `std::vector` is so bad anyway (especially for non trivial types), that you might as well just go ahead and use the guards.
-        - `push_back_noguard` was added to show the overhead of implementation of the wrapper, which should not be here if you have your own vector implementation.
+        - The base overhead of the debug mode for `std::vector` is so bad anyway (especially for non-trivial types), that you might as well just go ahead and use the guards.
+        - `push_back_noguard` was added to show the overhead of the implementation of the wrapper, which should not be here if you have your own vector implementation.
     - In debug optimized (clang `-g -Og`), results are globally the same as Release builds.
 
 This seems to be a totally acceptable overhead in most cases given the chances it has to detect issues.  
 Any object containing the equivalent of two pointers will most likely see only a small decrease in performance for `push_back`.
 
-On games for which we tested the guards, less than 2% of regression in frame duration was observed. Which makes sense, since you do (should) not spend most of your time doing operations on containers.
+On games for which we tested the guards, less than 2% of regression in frame duration was observed. Which makes sense, since you do not (rather, should not) spend most of your time doing operations on containers.
 
-However, I would still recommand disabling the guards in production.
+However, I would still recommend disabling the guards in production.
 
 
 # LICENSE

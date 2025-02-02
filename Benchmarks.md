@@ -314,16 +314,19 @@ As usual for microbenchmarks, take them with a grain of salt.
     - vector<uint64_t*2> => 5% overhead
     - vector<uint64_t*4> => 3% overhead
     - vector<std::string of 1 char> => 5-7%overhead
-    - clang Release `-O3` (but not `-O2`) seems to be the exception and shows a much bigger overhead for all types except `std::string`
+    - clang Release `-O3` (but not `-O2` nor GCC `-O3`) seems to be the exception and shows a much bigger overhead (+100% - +150%) for types other than `std::string`
         - It seems the guards defeat some kind of optimization here
         - Did not investigate why yet
 - Debug builds
     - In CMake Debug default configuration (MSVC `/Od` / clang without `-Og`)
         - Overhead is between 1% (MSVC std::string)  and 15% (the rest)
-        - The base overhead of the debug mode for `std::vector` is so bad anyway (especially for non trivial types), that you might as well just go ahead and use the guards.
-        - `push_back_noguard` was added to show the overhead of implementation of the wrapper, which should not be here if you have your own vector implementation.
+        - The base overhead of the debug mode for `std::vector` is so bad anyway (especially for non-trivial types) that you might as well just go ahead and use the guards.
+        - `push_back_noguard` was added to show the overhead of the implementation of the wrapper, which should not be here if you have your own vector implementation.
     - In debug optimized (clang `-g -Og`), results are globally the same as Release builds.
 
 This seems to be a totally acceptable overhead in most cases given the chances it has to detect issues.  
 Any object containing the equivalent of two pointers will most likely see only a small decrease in performance for `push_back`.
-However, I would still recommand disabling the guards in production.
+
+On games for which we tested the guards, less than 2% of regression in frame duration was observed. Which makes sense, since you do not (rather, should not) spend most of your time doing operations on containers.
+
+However, I would still recommend disabling the guards in production.
