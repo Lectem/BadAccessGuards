@@ -188,11 +188,11 @@ See [Benchmarks.md](Benchmarks.md)
 ## Quick recap
 
 - Release builds
-    - vector<uint64_t> => +50% overhead
-    - vector<uint64_t> - noreserve => ~10-25% overhead, depends on the growth strategy
-    - vector<uint64_t*2> => 5% overhead
-    - vector<uint64_t*4> => 3% overhead
-    - vector<std::string of 1 char> => 5-7%overhead
+    - `vector<uint64_t>` => +50% overhead
+    - `vector<uint64_t>` - noreserve => ~10-25% overhead, depends on the growth strategy
+    - `vector<uint64_t*2>` => 5% overhead
+    - `vector<uint64_t*4>` => 3% overhead
+    - `vector<std::string of 1 char>` => 5-7%overhead
     - clang Release `-O3` (but not `-O2` nor GCC `-O3`) seems to be the exception and shows a much bigger overhead (+100% - +150%) for types other than `std::string`
         - It seems the guards defeat some kind of optimization here
         - Did not investigate why yet
