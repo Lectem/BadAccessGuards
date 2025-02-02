@@ -12,6 +12,7 @@
 using ThreadDescBuffer = char[512];
 
 #ifdef _WIN32 // Windows 
+
 #include <Windows.h>
 
 bool IsAddressInStack(NT_TIB* tib, void* ptr)
@@ -98,6 +99,7 @@ uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription)
 }
 
 #elif defined(_GNU_SOURCE) && (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) // Linux / POSIX
+
 #include <pthread.h>
 bool IsAddressInCurrentStack(void* ptr)
 {
@@ -118,9 +120,12 @@ bool IsAddressInCurrentStack(void* ptr)
 // So in the end we'd need to keep the threadid instead of just a pointer to the current thread stack, which would be too expensive.
 // Just let the user inspect the stacks in the debugger instead.
 // The alternative is for the user to keep track of their threads and implement this function themselves.
-// We would also setup hooks to intercept pthread functions (this is what TSan does) but this is getting too heavy for this mini library.
+// We could also setup hooks to intercept pthread functions (this is what TSan does) but this is getting too heavy for this mini library.
 uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription) { outDescription[0] = '\0'; return 0; }
-#elif defined(__APPLE__) // Apple, why do you make it so hard to look for your posix_*_np functions... Just give us docs or something instead of having us dive into the darwin-libpthread code! Didn't bother goind further and try to compile/run this.
+
+#elif defined(__APPLE__) // MacOS / iOS
+// Apple, why do you make it so hard to look for your posix_*_np functions... Just give us docs or something instead of having us dive into the darwin-libpthread code! Didn't bother goind further and try to compile/run this.
+
 #include <pthread.h>
 bool IsAddressInCurrentStack(void* ptr)
 {
@@ -131,10 +136,15 @@ bool IsAddressInCurrentStack(void* ptr)
 	// The two functions above do NOT match the pthread_attr_tt attributes! https://github.com/apple/darwin-libpthread/blob/2b46cbcc56ba33791296cd9714b2c90dae185ec7/src/pthread.c#L476
 	return (uintptr_t(stackAddr) - stackSize) <= uintptr_t(ptr) && ptr <= stackAddr;
 }
+// We could use https://developer.apple.com/documentation/kernel/1537751-task_threads + pthread_from_mach_thread_np + pthread_get_stackaddr/size_np
+// Left as an exercise for the reader.
 uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription) { outDescription[0] = '\0'; return 0; }
-#else
+
+#else // Unknown platform, default to assuming race conditions.
+
 bool IsAddressInCurrentStack(void* ptr) { return false; } // Who knows ?
 uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription) { outDescription[0] = '\0'; return 0; }
+
 #endif
 
 bool DefaultReportBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message);

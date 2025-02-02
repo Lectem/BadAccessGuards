@@ -40,7 +40,7 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 - Battle-tested: Used on projects with 200+ people running the applications/games daily.
 
 # Non-goals/Will not implement
-- Detect every single race condition without code change
+- Detect every single type of race condition
   - This is not the objective of this library, you would use ThreadSanitizer, Valgrind or other tools for that. **This is not a substitute for proper design, test, and usage of sanitizers** but rather another tool in the box.
   - Some access patterns are not detected on purpose for performance.
 - Detect lock-free containers issues.
