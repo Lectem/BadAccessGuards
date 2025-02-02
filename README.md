@@ -68,13 +68,13 @@ Examples are available in [./examples](./examples).
 > Run with `--break` to make this example break in the debugger.
 >
 >
-> Testing read during write on the same thread, output:
+> Testing read during write on the same thread, output:  
 > Recursion detected: This may lead to invalid operations
 > - Parent operation: Writing.
 > - This operation: Reading.
 > 
 > 
-> Testing read during write on different threads, output:
+> Testing read during write on different threads, output:  
 > Race condition: Multiple threads are reading/writing to the data at the same time, potentially corrupting it!
 > - Other thread: Writing (Desc=ØUnsafe WriterØ Id=18084)
 > - This thread: Reading.
