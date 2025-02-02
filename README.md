@@ -13,6 +13,7 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 - Teams working on real-time/legacy projects
 - Teams working with concurrency a lot
   - Especially with frequent onboarding of newcomers
+- Toolchain vendors that would like to propose a lighter version of ThreadSanitizer shadow algorithm
 
 # Goals/Features
 
@@ -205,6 +206,8 @@ See [Benchmarks.md](Benchmarks.md)
 
 This seems to be a totally acceptable overhead in most cases given the chances it has to detect issues.  
 Any object containing the equivalent of two pointers will most likely see only a small decrease in performance for `push_back`.
+
+Compared to thread sanitizer, this is 5 to 30 times faster. Of course the detection level is way lower, but this is great as a smoketest since your code runs a lot during development.
 
 On games for which we tested the guards, less than 2% of regression in frame duration was observed. Which makes sense, since you do not (rather, should not) spend most of your time doing operations on containers.
 

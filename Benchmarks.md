@@ -306,6 +306,69 @@ As usual for microbenchmarks, take them with a grain of salt.
 |       1,000 |            8,722.72 |          114,643.08 |    0.1% |      1.18 | `guardedvector.push_back_noguard`
 |       1,000 |            9,891.90 |          101,092.79 |    0.1% |      1.19 | `guardedvector.push_back`
 
+## ThreadSanitizer
+
+### Clang 14.0.6 WSL `-fsanitize=thread -O3 -DNDEBUG` (CMake Release default)
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t
+|------------:|--------------------:|--------------------:|--------:|----------:|:-------------------
+|       1,000 |           27,569.43 |           36,272.06 |    0.1% |      1.21 | `std::vector.push_back`
+|     100,000 |        2,755,273.56 |              362.94 |    0.1% |      1.21 | `std::vector.push_back`
+|  10,000,000 |      275,502,920.00 |                3.63 |    0.0% |      3.18 | `std::vector.push_back`
+|       1,000 |           34,961.04 |           28,603.27 |    0.0% |      1.21 | `std::vector.push_back - noreserve`
+|     100,000 |        6,557,961.12 |              152.49 |    0.1% |      1.22 | `std::vector.push_back - noreserve`
+|  10,000,000 |      873,837,301.00 |                1.14 |    3.2% |      9.30 | `std::vector.push_back - noreserve`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*2
+|------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
+|       1,000 |           33,820.31 |           29,568.03 |    0.1% |      1.22 | `std::vector.push_back`
+|     100,000 |        3,385,774.65 |              295.35 |    0.1% |      1.21 | `std::vector.push_back`
+|  10,000,000 |      338,732,175.00 |                2.95 |    0.1% |      4.15 | `std::vector.push_back`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*4
+|------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
+|       1,000 |           54,151.45 |           18,466.73 |    0.0% |      1.21 | `std::vector.push_back`
+|     100,000 |        5,437,534.41 |              183.91 |    0.2% |      1.22 | `std::vector.push_back`
+|  10,000,000 |      543,613,425.00 |                1.84 |    0.1% |      6.57 | `std::vector.push_back`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of std::string
+|------------:|--------------------:|--------------------:|--------:|----------:|:----------------------
+|       1,000 |           48,015.64 |           20,826.55 |    0.1% |      1.21 | `std::vector.push_back`
+|     100,000 |        4,812,346.95 |              207.80 |    0.1% |      1.23 | `std::vector.push_back`
+|  10,000,000 |      483,697,656.00 |                2.07 |    0.1% |      5.90 | `std::vector.push_back`
+
+
+### Clang 14.0.6 WSL `-fsanitize=thread -O2 -DNDEBUG` (CMake RelWithDebInfo default)
+
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t
+|------------:|--------------------:|--------------------:|--------:|----------:|:-------------------
+|       1,000 |           27,600.31 |           36,231.48 |    0.1% |      1.21 | `std::vector.push_back`
+|     100,000 |        2,756,755.84 |              362.75 |    0.1% |      1.21 | `std::vector.push_back`
+|  10,000,000 |      275,798,601.00 |                3.63 |    0.1% |      3.18 | `std::vector.push_back`
+|       1,000 |           35,054.95 |           28,526.64 |    0.0% |      1.21 | `std::vector.push_back - noreserve`
+|     100,000 |        7,808,870.40 |              128.06 |    0.2% |      1.18 | `std::vector.push_back - noreserve`
+|  10,000,000 |      888,449,152.00 |                1.13 |    1.1% |      9.83 | `std::vector.push_back - noreserve`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*2
+|------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
+|       1,000 |           65,370.03 |           15,297.53 |    0.1% |      1.16 | `std::vector.push_back`
+|     100,000 |        6,549,550.81 |              152.68 |    0.2% |      1.14 | `std::vector.push_back`
+|  10,000,000 |      653,770,052.00 |                1.53 |    0.0% |      7.47 | `std::vector.push_back`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t*4
+|------------:|--------------------:|--------------------:|--------:|----------:|:---------------------
+|       1,000 |           91,220.54 |           10,962.44 |    0.2% |      1.19 | `std::vector.push_back`
+|     100,000 |        9,141,664.85 |              109.39 |    0.1% |      1.23 | `std::vector.push_back`
+|  10,000,000 |      914,898,255.00 |                1.09 |    0.1% |     10.89 | `std::vector.push_back`
+
+| complexityN |               ns/op |                op/s |    err% |     total | Vector of std::string
+|------------:|--------------------:|--------------------:|--------:|----------:|:----------------------
+|       1,000 |           91,597.87 |           10,917.28 |    0.0% |      1.19 | `std::vector.push_back`
+|     100,000 |        9,182,358.45 |              108.90 |    0.1% |      1.23 | `std::vector.push_back`
+|  10,000,000 |      920,280,188.00 |                1.09 |    0.1% |     10.69 | `std::vector.push_back`
+
+
 ## Summary
 
 - Release builds
@@ -326,6 +389,8 @@ As usual for microbenchmarks, take them with a grain of salt.
 
 This seems to be a totally acceptable overhead in most cases given the chances it has to detect issues.  
 Any object containing the equivalent of two pointers will most likely see only a small decrease in performance for `push_back`.
+
+Compared to thread sanitizer, this is 5 to 30 times faster. Of course the detection level is way lower, but this is great as a smoketest since your code runs a lot during development.
 
 On games for which we tested the guards, less than 2% of regression in frame duration was observed. Which makes sense, since you do not (rather, should not) spend most of your time doing operations on containers.
 

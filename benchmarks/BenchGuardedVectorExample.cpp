@@ -35,6 +35,7 @@ int BenchVector(ankerl::nanobench::Bench& bench, bool withNoReserve)
 		}
 	}
 
+#if defined(__has_feature) && __has_feature(thread_sanitizer)
 #ifndef NDEBUG // Only gives different perf in debug builds
 	{
 		ExampleGuardedVector<T> guardedvector;
@@ -72,7 +73,7 @@ int BenchVector(ankerl::nanobench::Bench& bench, bool withNoReserve)
 					});
 		}
 	}
-
+#endif //defined(__has_feature) && __has_feature(thread_sanitizer)
 	if (withNoReserve)
 	{
 		{
@@ -93,6 +94,7 @@ int BenchVector(ankerl::nanobench::Bench& bench, bool withNoReserve)
 			}
 		}
 
+#if defined(__has_feature) && __has_feature(thread_sanitizer)
 		{
 			ExampleGuardedVector<T> guardedvector;
 			for (size_t size : nbPushBacksPerIteration)
@@ -111,6 +113,7 @@ int BenchVector(ankerl::nanobench::Bench& bench, bool withNoReserve)
 			}
 		}
 	}
+#endif //defined(__has_feature) && __has_feature(thread_sanitizer)
 	return x;
 }
 

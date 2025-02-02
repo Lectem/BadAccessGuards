@@ -10,6 +10,12 @@
 # endif
 #endif
 
+// Disable the guards when running ThreadSanitizer, we are racy by design!
+#if defined(__has_feature) && __has_feature(thread_sanitizer)
+# undef BAD_ACCESS_GUARDS_ENABLE
+# define BAD_ACCESS_GUARDS_ENABLE 0
+#endif
+
 #if BAD_ACCESS_GUARDS_ENABLE
 
 #include <stdint.h>
