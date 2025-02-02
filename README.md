@@ -201,7 +201,7 @@ See [Benchmarks.md](Benchmarks.md)
         - Did not investigate why yet
 - Debug builds
     - In CMake Debug default configuration (MSVC `/Od` / clang without `-Og`)
-        - Overhead is between 1% (MSVC std::string)  and **15%** (the rest)
+        - Overhead is between 1% (`std::string`)  and **30%** (the rest)
         - The base overhead of the debug mode for `std::vector` is so bad anyway (especially for non-trivial types), that you might as well just go ahead and use the guards.
         - `push_back_noguard` was added to show the overhead of the implementation of the wrapper, which should not be here if you have your own vector implementation.
     - In debug optimized (clang `-Og`), results are globally the same as Release builds.
