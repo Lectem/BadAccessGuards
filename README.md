@@ -53,11 +53,12 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 
 # Usage
 
-1. Set `BAD_ACCESS_GUARDS_ENABLE=1` for your **in-house** builds (you probably want it off in production...)
+1. Define `BAD_ACCESS_GUARDS_ENABLE=1` for your **in-house** builds (you probably want it off in production...)
 2. Declare the shadow memory that will hold the state and pointer to stack with `BA_GUARD_DECL(varname)`
-3. For all (relevant) read operations of the container/object, use the scope guard `BA_GUARD_READ(varname)`
-4. For all (relevant) write operations of the container/object, use the scope guard `BA_GUARD_WRITE(varname)`. But only if it always writes!
-5. Add `BA_GUARD_DESTROY(varname)` at the beginning of the destructor
+3. For all (relevant) read operations of the container / object, use the scope guard `BA_GUARD_READ(varname)`.
+4. For all (relevant) write operations of the container / object, use the scope guard `BA_GUARD_WRITE(varname)`. 
+  Do this only if it always writes! For example, don't use it on `operator[]` even though it returns a reference, use `BA_GUARD_READ` instead.
+5. Add `BA_GUARD_DESTROY(varname)` at the beginning of the destructor.
 6. Enjoy!
 
 # Examples

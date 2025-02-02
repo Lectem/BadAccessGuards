@@ -1,6 +1,14 @@
 ﻿#pragma once
 
-// TODO: documentation
+// 1. Define `BAD_ACCESS_GUARDS_ENABLE=1` for your **in-house** builds (you probably want it off in production...)
+// 2. Declare the shadow memory that will hold the state and pointer to stack with `BA_GUARD_DECL(varname)`
+// 3. For all (relevant) read operations of the container / object, use the scope guard `BA_GUARD_READ(varname)`.
+// 4. For all (relevant) write operations of the container / object, use the scope guard `BA_GUARD_WRITE(varname)`. 
+//   Do this only if it always writes! For example, don't use it on `operator[]` even though it returns a reference, use `BA_GUARD_READ` instead.
+// 5. Add `BA_GUARD_DESTROY(varname)` at the beginning of the destructor.
+// 6. Enjoy!
+//
+// You may optionally configure it with `BadAccessGuardSetConfig`.
 
 #if !defined(BAD_ACCESS_GUARDS_ENABLE)
 # if defined(NDEBUG)
@@ -207,18 +215,19 @@ struct BadAccessGuardDestroy
 
 struct BadAccessGuardConfig
 {
-	// Should we allow to break at all, or simply call BadAccessGuardReport
-	// Default: true
+	// Should we allow to break at all, or simply call `reportBadAccess`
+	// Default: true.
 	bool allowBreak;
 	// Set this to true if you want to break early.
 	// Usually you would want to set this to true when the debugger is connected.
 	// If no debugger is connected, you most likely want this set to false to get the error in your logs.
 	// Of course, if you save minidumps, logging is probably unnecessary.
-	// Default true on windows if a debugger is detected during startup
+	// Default: true on Windows if a debugger is detected during startup, false otherwise.
 	bool breakASAP;
 
 	// If non-null, used to report errors instead of the default function.
-	// Breaking is still controlled by allowBreak and breakASAP.
+	// Breaking is still controlled by `allowBreak` and `breakASAP`.
+	// Returning false can prevent triggering the breakpoint (except if `breakASAP` is true)
 	using ReportBadAccessFunction = bool(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message);
 	ReportBadAccessFunction* reportBadAccess;
 };
