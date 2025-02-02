@@ -223,7 +223,7 @@ As usual for microbenchmarks, take them with a grain of salt.
 
 ### MSVC 19.42.34436.0 `/d2Obforceinline /RTC1`
 
-> Note:  NOT `/Od` since it even disables /d2Obforceinline... You should probably be using at least /O1 anyway.
+> Note:  NOT `/Od` since it even disables `/d2Obforceinline`... You should probably be using at least `/O1` anyway.
 
 | complexityN |               ns/op |                op/s |    err% |     total | Vector of uint64_t
 |------------:|--------------------:|--------------------:|--------:|----------:|:-------------------
@@ -386,7 +386,7 @@ As usual for microbenchmarks, take them with a grain of salt.
         - Did not investigate why yet
 - Debug builds
     - In CMake Debug default configuration (MSVC `/Od` / clang without `-Og`)
-        - Overhead is between 1% (MSVC std::string)  and **15%** (the rest)
+        - Overhead is between 1% (`std::string`)  and **30%** (the rest)
         - The base overhead of the debug mode for `std::vector` is so bad anyway (especially for non-trivial types), that you might as well just go ahead and use the guards.
         - `push_back_noguard` was added to show the overhead of the implementation of the wrapper, which should not be here if you have your own vector implementation.
     - In debug optimized (clang `-Og`), results are globally the same as Release builds.
