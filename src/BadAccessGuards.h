@@ -19,7 +19,12 @@
 #endif
 
 // Disable the guards when running ThreadSanitizer, we are racy by design!
-#if defined(__has_feature) && __has_feature(thread_sanitizer)
+#if defined(__has_feature) // Clang
+#  if __has_feature(thread_sanitizer) // Can't be checked in same #if than defined or it will break old GCC versions
+#   undef BAD_ACCESS_GUARDS_ENABLE
+#   define BAD_ACCESS_GUARDS_ENABLE 0
+#  endif
+#elif defined(__SANITIZE_THREAD__) // GCC
 # undef BAD_ACCESS_GUARDS_ENABLE
 # define BAD_ACCESS_GUARDS_ENABLE 0
 #endif

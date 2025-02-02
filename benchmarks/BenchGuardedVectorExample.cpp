@@ -1,9 +1,21 @@
 #include "../examples/GuardedVectorExample.h"
 
 #include <nanobench.h>
+#include <chrono>
 
 #include <vector>
 
+#if defined(__has_feature) // Clang
+#  if __has_feature(thread_sanitizer)
+#    define USING_THREAD_SANITIZER 1
+#  else
+#    define USING_THREAD_SANITIZER 0
+#  endif
+#elif defined(__SANITIZE_THREAD__) // GCC
+#  define USING_THREAD_SANITIZER 1
+#else
+#  define USING_THREAD_SANITIZER 0
+#endif
 
 using namespace std::chrono_literals;
 const auto minEpoch = 100ms;
@@ -35,7 +47,7 @@ int BenchVector(ankerl::nanobench::Bench& bench, bool withNoReserve)
 		}
 	}
 
-#if defined(__has_feature) && __has_feature(thread_sanitizer)
+#if !USING_THREAD_SANITIZER
 #ifndef NDEBUG // Only gives different perf in debug builds
 	{
 		ExampleGuardedVector<T> guardedvector;
@@ -73,7 +85,7 @@ int BenchVector(ankerl::nanobench::Bench& bench, bool withNoReserve)
 					});
 		}
 	}
-#endif //defined(__has_feature) && __has_feature(thread_sanitizer)
+#endif //!USING_THREAD_SANITIZER
 	if (withNoReserve)
 	{
 		{
@@ -94,7 +106,7 @@ int BenchVector(ankerl::nanobench::Bench& bench, bool withNoReserve)
 			}
 		}
 
-#if defined(__has_feature) && __has_feature(thread_sanitizer)
+#if !USING_THREAD_SANITIZER
 		{
 			ExampleGuardedVector<T> guardedvector;
 			for (size_t size : nbPushBacksPerIteration)
@@ -112,8 +124,8 @@ int BenchVector(ankerl::nanobench::Bench& bench, bool withNoReserve)
 						});
 			}
 		}
+#endif //!USING_THREAD_SANITIZER
 	}
-#endif //defined(__has_feature) && __has_feature(thread_sanitizer)
 	return x;
 }
 
