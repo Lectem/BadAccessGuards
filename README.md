@@ -1,9 +1,9 @@
 # BadAccessGuards
 
+This library makes it possible to detect most race conditions involving (but not only) containers through their instrumentation, at a minimal runtime cost.
+
 Finding race conditions and bad access patterns usually involves sanitizers or special programs such as Valgrind.
 Those are however seldom run because they can have a heavy runtime performance cost.
-
-This library makes it possible to detect most race conditions involving (but not only) containers through their instrumentation, at a minimal runtime cost.
 
 As a bonus, we also get detection of memory use-after-free and corruption for free. This also detects recursive operations, which are often dangerous in containers.
 
@@ -136,7 +136,7 @@ There are two options:
 - Some kind of recursion happened.
 
 And since we do not need a 100% error detection, these state changes do not need to be atomic. We just want to force the reads and writes of the state.  
-**Remember:** the invariants can not break on a single thread except in the case of a recursion!
+**Remember:** the invariants cannot break on a single thread except in the case of a recursion!
 
 > **Note:** We do not care about potential reorders of the operations by the compiler. It must honor the invariants from a single-thread point of view.  
 > The re-orders also cannot cause issues (except lowering the detection rate) in a multithread context. If it did, it would mean your synchronization is bad, which you want to detect anyway.  
@@ -153,7 +153,7 @@ The next best option is the one we implement: send an interrupt for the debugger
 - If we break, we want to know what thread was involved in the bad access.
   - This is necessary to know if the issue is recursion or a race condition
   - We could have used the thread ID, but this is slow to get. (and again, we want this to be fast). Instead, simply store the stack pointer. This is enough to identify a thread!
-    - And if you are using fibers, well, you actually get fiber detection for free too, assuming you keep them around a bit and can list them.
+    - And if you are using fibers, well, you actually get fiber identification for free too, assuming you keep them around a bit and can list them.
     - Right now, looking up what thread stack contains the pointer is not implemented on *Linux* (because the OS provides no way to do this, would have to hook `pthread` for example), nor on *MacOS* (though it is possible and comments on how to do it are in the source). We can however still determine if the issue is a recursion or race condition.
 
 ## Keeping it fast and lightweight
