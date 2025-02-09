@@ -126,9 +126,9 @@ struct BadAccessGuardShadow
 };
 
 // We have two versions to reduce code size at call site
-void BA_GUARD_NO_INLINE BAGuardOnBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message);
+void BA_GUARD_NO_INLINE BAGuardHandleBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState, bool assertionOrWarning, const char* message);
 // Both inline and no_inline! inline is necessary because we define it in a header, but still we don't actually want to inline it, hence no-inline.
-inline void BA_GUARD_NO_INLINE BAGuardOnBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState) { BAGuardOnBadAccess(previousOperation, toState, true, nullptr); }
+inline void BA_GUARD_NO_INLINE BAGuardHandleBadAccess(StateAndStackAddr previousOperation, BadAccessGuardState toState) { BAGuardHandleBadAccess(previousOperation, toState, true, nullptr); }
 
 struct BadAccessGuardRead
 {
@@ -138,7 +138,7 @@ struct BadAccessGuardRead
         const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
         if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) BA_GUARD_UNLIKELY // Early out on fast path
         {
-            BAGuardOnBadAccess(lastSeenOp, BAGuard_ReadingOrIdle);
+            BAGuardHandleBadAccess(lastSeenOp, BAGuard_ReadingOrIdle);
         }
     }
     BA_GUARD_FORCE_INLINE BadAccessGuardRead(BadAccessGuardShadow& shadow, bool assertionOrWarning, char* message)
@@ -146,7 +146,7 @@ struct BadAccessGuardRead
         const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
         if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) BA_GUARD_UNLIKELY// Early out on fast path
         {
-            BAGuardOnBadAccess(lastSeenOp, BAGuard_ReadingOrIdle, assertionOrWarning, message);
+            BAGuardHandleBadAccess(lastSeenOp, BAGuard_ReadingOrIdle, assertionOrWarning, message);
         }
     }
     // We do not check again after the read itself, it would add too much cost for little benefit. Most of the issues will be caught by the write ops.
@@ -161,7 +161,7 @@ struct BadAccessGuardWrite
         const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
         if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) BA_GUARD_UNLIKELY
         {
-            BAGuardOnBadAccess(lastSeenOp, BAGuard_Writing);
+            BAGuardHandleBadAccess(lastSeenOp, BAGuard_Writing);
         }
         shadow.SetStateAtomicRelaxed(BAGuard_Writing); // Always write, so that we may trigger in other thread too
     }
@@ -170,7 +170,7 @@ struct BadAccessGuardWrite
         const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
         if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_Writing) BA_GUARD_UNLIKELY
         {
-            BAGuardOnBadAccess(lastSeenOp, BAGuard_Writing);
+            BAGuardHandleBadAccess(lastSeenOp, BAGuard_Writing);
         }
         shadow.SetStateAtomicRelaxed(BAGuard_ReadingOrIdle);
     }
@@ -190,7 +190,7 @@ struct BadAccessGuardWriteEx
         const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
         if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) BA_GUARD_UNLIKELY
         {
-            BAGuardOnBadAccess(lastSeenOp, BAGuard_Writing, assertionOrWarning, message);
+            BAGuardHandleBadAccess(lastSeenOp, BAGuard_Writing, assertionOrWarning, message);
         }
         shadow.SetStateAtomicRelaxed(BAGuard_Writing); // Always write, may trigger on other thread too
     }
@@ -199,7 +199,7 @@ struct BadAccessGuardWriteEx
         const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
         if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_Writing) BA_GUARD_UNLIKELY
         {
-            BAGuardOnBadAccess(lastSeenOp, BAGuard_Writing, assertionOrWarning, message);
+            BAGuardHandleBadAccess(lastSeenOp, BAGuard_Writing, assertionOrWarning, message);
         }
         shadow.SetStateAtomicRelaxed(BAGuard_ReadingOrIdle);
     }
@@ -214,7 +214,7 @@ struct BadAccessGuardDestroy
         const StateAndStackAddr lastSeenOp = BA_GUARD_ATOMIC_RELAXED_LOAD_UPTR(shadow.stateAndInStackAddr);
         if (BadAccessGuardShadow::GetState(lastSeenOp) != BAGuard_ReadingOrIdle) BA_GUARD_UNLIKELY
         {
-            BAGuardOnBadAccess(lastSeenOp, BAGuard_Writing);
+            BAGuardHandleBadAccess(lastSeenOp, BAGuard_Writing);
         }
         shadow.SetStateAtomicRelaxed(BAGuard_DestructorCalled); // Always write
     }
