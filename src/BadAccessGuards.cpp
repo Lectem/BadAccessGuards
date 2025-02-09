@@ -188,7 +188,7 @@ bool DefaultReportBadAccess(StateAndStackAddr previousOperation, BadAccessGuardS
     else
     {
         const char* stateToStr[] = {
-            toState == BAGuard_Writing ? "Writing" : "Reading", // The only cases when we can see this state are when we try to read, or in the writing guard destructor, if another write ends before. So we know that it can only be due to a write.
+            toState == BAGuard_Writing ? "Writing" : "Reading", // The only cases when we can see this state are when we try to read, or in the writing guard destructor which means another write ended before. So we know that it can only be due to a write (or corruption).
             "Writing",
             "Destroyed"
         };
