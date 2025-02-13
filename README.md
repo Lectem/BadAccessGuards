@@ -14,6 +14,7 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 - Teams working with concurrency a lot
   - Especially with frequent onboarding of newcomers
 - Toolchain vendors that would like to propose a lighter version of ThreadSanitizer shadow algorithm
+- Someone suspecting specific code to be racy but has trouble reproducing the race
 
 # Goals/Features
 
@@ -64,6 +65,10 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 # Examples
 
 Examples are available in [./examples](./examples).
+
+How it looks in Visual Studio(from an error caught in production where we append decoded frames to a list while reading it):
+
+![Race condition in production](./examples/FoundInProduction.png)
 
 ## Sample output:
 
