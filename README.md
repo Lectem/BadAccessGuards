@@ -1,6 +1,6 @@
 # BadAccessGuards
 
-This library makes it possible to detect most race conditions involving (but not only) containers through their instrumentation, at a minimal runtime cost.
+This C++ library makes it possible to detect most race conditions involving (but not only) containers through their instrumentation, at a minimal runtime cost.
 
 Finding race conditions and bad access patterns usually involves sanitizers or special programs such as Valgrind.
 Those are however seldom run because they can have a heavy runtime performance cost.
@@ -66,7 +66,7 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 
 Examples are available in [./examples](./examples).
 
-How it looks in Visual Studio(from an error caught in production where we append decoded frames to a list while reading it):
+Here is how it looks in Visual Studio(error caught in production, we were appending decoded frames to a collection while reading it):
 
 ![Race condition in production](./examples/FoundInProduction.png)
 
