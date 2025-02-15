@@ -114,7 +114,6 @@ struct BadAccessGuardShadow
 
     StateAndStackAddr stateAndInStackAddr{ BAGuard_ReadingOrIdle };
 
-    // Not in StateAndStackAddr, as we want to be setting 
     BA_GUARD_FORCE_INLINE void SetStateAtomicRelaxed(BadAccessGuardState newState)
     {
         // All in a single line for debug builds... sorry !
@@ -163,7 +162,7 @@ struct BadAccessGuardWrite
         {
             BAGuardHandleBadAccess(lastSeenOp, BAGuard_Writing);
         }
-        shadow.SetStateAtomicRelaxed(BAGuard_Writing); // Always write, so that we may trigger in other thread too
+        shadow.SetStateAtomicRelaxed(BAGuard_Writing); // Always write, so that we may trigger in the other thread too
     }
     BA_GUARD_FORCE_INLINE ~BadAccessGuardWrite()
     {
