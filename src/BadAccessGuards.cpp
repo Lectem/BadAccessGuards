@@ -19,6 +19,21 @@ bool IsAddressInStack(NT_TIB* tib, void* ptr)
 {
     return tib->StackLimit <= ptr && ptr <= tib->StackBase;
 }
+
+bool IsAddressInStackSafe(NT_TIB* tib, void* ptr)
+{
+    __try
+    {
+        // If you break here with the debugger, it means that you're unlucky and the thread just closed right after we saw it
+        // This can be ignored, but means that if this was the offending thread we will not be able to know it.
+        return tib && tib->StackLimit <= ptr && ptr <= tib->StackBase;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        return false;
+    }
+}
+
 bool IsAddressInCurrentStack(void* ptr)
 {
     NT_TIB* tib = (NT_TIB*)NtCurrentTeb(); // NT_TEB starts with NT_TIB for all usermode threads. See ntddk.h.
@@ -30,18 +45,19 @@ bool IsAddressInCurrentStack(void* ptr)
 #pragma comment(lib, "ntdll.lib")
 uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription)
 {
+    // Clean description
     outDescription[0] = '\0';
 
-    HANDLE hThreadSnap = INVALID_HANDLE_VALUE;
-    THREADENTRY32 te32;
-
-    // Take a snapshot of all running threads  
-    hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    // Take a snapshot of all running threads.
+    // Weirdly it does not necessarily see all threads (even if they are still alive and shown in the debugger)
+    // It seems that threads need to be alive for a certain amount of time before it can actually see them.
+    // PssCaptureSnapshot suffers from the same issue.
+    HANDLE hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
     if (hThreadSnap == INVALID_HANDLE_VALUE)
-        return NULL;
-
+        return 0;
 
     // Fill in the size of the structure before using it. 
+    THREADENTRY32 te32;
     te32.dwSize = sizeof(THREADENTRY32);
 
     DWORD idOfThreadWithAddrInStack = 0; // 0 is an invalid thread id
@@ -50,18 +66,22 @@ uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription)
         bHasThread && !idOfThreadWithAddrInStack;
         bHasThread = Thread32Next(hThreadSnap, &te32))
     {
-        if (te32.th32OwnerProcessID == dwOwnerPID)
+        if (te32.th32OwnerProcessID != dwOwnerPID)
         {
-            const THREADINFOCLASS ThreadBasicInformation = THREADINFOCLASS(0);
-
+            continue; // Don't look at other processes threads
+        }
+        if (HANDLE threadHdl = OpenThread(THREAD_QUERY_INFORMATION | THREAD_QUERY_LIMITED_INFORMATION, FALSE, te32.th32ThreadID))
+        {
+            // The following structures are not provided by the Windows SDK but are well documented.
             typedef LONG KPRIORITY;
-
+    
             typedef struct _CLIENT_ID {
                 HANDLE UniqueProcess;
                 HANDLE UniqueThread;
             } CLIENT_ID;
             typedef CLIENT_ID* PCLIENT_ID;
 
+            // Actually matches PSS_THREAD_ENTRY https://learn.microsoft.com/en-us/windows/win32/api/processsnapshot/ns-processsnapshot-pss_thread_entry 
             typedef struct _THREAD_BASIC_INFORMATION
             {
                 NTSTATUS                ExitStatus;
@@ -70,31 +90,28 @@ uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription)
                 KAFFINITY               AffinityMask;
                 KPRIORITY               Priority;
                 KPRIORITY               BasePriority;
-            } THREAD_BASIC_INFORMATION, * PTHREAD_BASIC_INFORMATION;
+            } THREAD_BASIC_INFORMATION, * PTHREAD_BASIC_INFORMATION;    
 
-
-            if (HANDLE threadHdl = OpenThread(THREAD_QUERY_INFORMATION | THREAD_QUERY_LIMITED_INFORMATION, FALSE, te32.th32ThreadID))
+            // Get TEB address so that we can lookup the stack information.
+            THREAD_BASIC_INFORMATION basicInfo;
+            const THREADINFOCLASS ThreadBasicInformation = THREADINFOCLASS(0);
+            if (SUCCEEDED(NtQueryInformationThread(threadHdl, ThreadBasicInformation, &basicInfo, sizeof(THREAD_BASIC_INFORMATION), NULL))
+                // The thread might die while we check its TEB, so we have a safe version that won't crash
+                && IsAddressInStackSafe((NT_TIB*)basicInfo.TebBaseAddress, ptr))
             {
-                // Get TEB address
-                THREAD_BASIC_INFORMATION basicInfo;
-                NtQueryInformationThread(threadHdl, ThreadBasicInformation, &basicInfo, sizeof(THREAD_BASIC_INFORMATION), NULL);
-                if (IsAddressInStack((NT_TIB*)basicInfo.TebBaseAddress, ptr))
+                idOfThreadWithAddrInStack = te32.th32ThreadID;
+                PWSTR desc;
+                if (SUCCEEDED(GetThreadDescription(threadHdl, &desc)))
                 {
-                    idOfThreadWithAddrInStack = te32.th32ThreadID;
-                    PWSTR desc;
-                    if (SUCCEEDED(GetThreadDescription(threadHdl, &desc)))
-                    {
-                        int nbChars = WideCharToMultiByte(GetConsoleCP(), 0, desc, -1, outDescription, sizeof(ThreadDescBuffer) - 1, NULL, NULL);
-                        outDescription[nbChars] = '\0'; // Make sure to have a null terminated string. nbChars is 0 on error => Empty string
-                        LocalFree(desc);
-                    }
+                    int nbChars = WideCharToMultiByte(GetConsoleCP(), 0, desc, -1, outDescription, sizeof(ThreadDescBuffer) - 1, NULL, NULL);
+                    outDescription[nbChars] = '\0'; // Make sure to have a null terminated string. nbChars is 0 on error => Empty string
+                    LocalFree(desc);
                 }
-                CloseHandle(threadHdl);
-
             }
+            CloseHandle(threadHdl);
         }
     }
-    CloseHandle(hThreadSnap);     // Must clean up the snapshot object!
+    CloseHandle(hThreadSnap);
     return idOfThreadWithAddrInStack;
 }
 
