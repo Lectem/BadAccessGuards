@@ -54,17 +54,27 @@ As a bonus, we also get detection of memory use-after-free and corruption for fr
 
 # Usage
 
-1. Define `BAD_ACCESS_GUARDS_ENABLE=1` for your **in-house** builds (you probably want it off in production...)
-2. Declare the shadow memory that will hold the state and pointer to stack with `BA_GUARD_DECL(varname)`
-3. For all (relevant) read operations of the container / object, use the scope guard `BA_GUARD_READ(varname)`.
-4. For all (relevant) write operations of the container / object, use the scope guard `BA_GUARD_WRITE(varname)`. 
-  Do this only if it always writes! For example, don't use it on `operator[]` even though it returns a reference, use `BA_GUARD_READ` instead.
-5. Add `BA_GUARD_DESTROY(varname)` at the beginning of the destructor.
-6. Enjoy!
+1. Add `BadAccessGuards.h` and `BadAccessGuards.cpp` to your project. (Via CMake, or copy the files)
+2. Define `BAD_ACCESS_GUARDS_ENABLE=1` for your **in-house** builds (you probably want it off in production...)
+3. Declare the shadow memory that will hold the state and pointer to stack with `BA_GUARD_DECL(varname)`
+4. For all (relevant) read operations of the container / object, use the scope guard `BA_GUARD_READ(varname)`.
+ . For all (relevant) write operations of the container / object, use the scope guard `BA_GUARD_WRITE(varname)`. 
+5 Do this only if it always writes! For example, don't use it on `operator[]` even though it returns a reference, use `BA_GUARD_READ` instead.
+6. Add `BA_GUARD_DESTROY(varname)` at the beginning of the destructor.
+7. Enjoy!
 
 # Examples
 
 Examples are available in [./examples](./examples).
+You may build and run them easily using CMake:
+
+```sh
+cmake -B build     # Generate the project
+# Open the project in your IDE (if supported by your generator)
+cmake --open build
+# Or build it
+cmake --build build
+```
 
 Here is how it looks in Visual Studio(error caught in production, we were appending decoded frames to a collection while reading it):
 
