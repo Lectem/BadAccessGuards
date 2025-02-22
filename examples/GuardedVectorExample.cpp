@@ -7,25 +7,17 @@
 #include <BadAccessGuards.h>
 #include <vector>
 #include "GuardedVectorExample.h"
+#include <functional>
 
-struct RecursiveBehaviour {
-    ExampleGuardedVector<RecursiveBehaviour>& vectorRef;
-    int& valueRef;
-    RecursiveBehaviour(ExampleGuardedVector<RecursiveBehaviour>& v, int& value)
-        : vectorRef(v)
-        , valueRef(value)
+// Simulate any kind of event system where one may register and trigger delegates
+static std::vector<std::function<void()>> gEventDelegates;
+static void TriggerEvent()
+{
+    for (const auto& delegate : gEventDelegates)
     {
+        delegate();
     }
-
-    ~RecursiveBehaviour()
-    {
-        // This is something that sometimes happen when you have a lot of callbacks...
-        // Things will try to use the container they are being removed from, 
-        // which is sometimes fine, but most often dangerous.
-        // Here we're doing a read, but it could be something adding an element !
-        valueRef += vectorRef.size();
-    }
-};
+}
 
 int main()
 {
@@ -38,10 +30,26 @@ int main()
     int accum = 0; // Variable to avoid optimizations
 
     {
-        ExampleGuardedVector<RecursiveBehaviour> v;
-        printf("Testing read during write on the same thread, output:\n");
-        v.push_back({ v, accum });
-        v.clear();
+        printf("\nTesting write during write on the same thread, output:\n");
+        // A class that somehow triggers the event on construction
+        struct RecursiveBehaviour
+        { 
+            RecursiveBehaviour()
+            {
+                // You are actually inside the `ExampleGuardedVector::emplace_back()`!
+                TriggerEvent();
+            }
+        };
+    
+        ExampleGuardedVector<RecursiveBehaviour> vector;
+        // Somewhere you setup a delegate function clearing the vector
+        gEventDelegates.push_back([&]() {
+            vector.clear();
+            });
+    
+        // Then you add some item that triggers the event delegates (could be a signal, event, etc...)
+        // The issue is that while modifying the vector itself (you're building the item inside it!), you're also asking to clear it (due to the delegate).
+        vector.emplace_back();
     }
 
     using namespace std::chrono_literals;

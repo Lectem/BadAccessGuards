@@ -55,6 +55,14 @@ public:
         super::push_back(std::move(val));
     }
 
+    template <class... _Valty>
+    decltype(auto) emplace_back(_Valty&&... _Val)
+    {
+        BA_GUARD_WRITE(BAShadow);
+        return super::emplace_back(std::forward<_Valty>(_Val)...);
+    }
+
+
     T* data()
     {
         BA_GUARD_READ(BAShadow);
