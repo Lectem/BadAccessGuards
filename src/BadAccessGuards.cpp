@@ -40,78 +40,72 @@ bool IsAddressInCurrentStack(void* ptr)
     return IsAddressInStack(tib, ptr);
 }
 
-#include <tlhelp32.h>
-#include <winternl.h>
-#pragma comment(lib, "ntdll.lib")
+#include <ProcessSnapshot.h>
+// GetThreadDescription may not be in old versions of the SDK, 
+// and if we want to be able to run on older versions of Windows, we need to dynamically load it anyway.
+typedef HRESULT(WINAPI* GetThreadDescriptionPtrType)(HANDLE hThread, PWSTR* threadDescription);
+
 uint64_t FindThreadWithPtrInStack(void* ptr, ThreadDescBuffer outDescription)
 {
+    // Attempt to get GetThreadDescription on first use of this function
+    static GetThreadDescriptionPtrType GetThreadDescriptionPtr = (GetThreadDescriptionPtrType)GetProcAddress(GetModuleHandleA("KernelBase.dll"), "GetThreadDescription");
+
     // Clean description
     outDescription[0] = '\0';
+    DWORD idOfThreadWithAddrInStack = 0; // 0 is an invalid thread id
 
+    // Pss* functions are available for applications/drivers since Windows 8.1.
+    // CreateToolhelp32Snapshot is only available on desktop but was available since Windows XP.
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_SYSTEM) && (NTDDI_VERSION >= NTDDI_WINBLUE)
     // Take a snapshot of all running threads.
     // Weirdly it does not necessarily see all threads (even if they are still alive and shown in the debugger)
     // It seems that threads need to be alive for a certain amount of time before it can actually see them.
-    // PssCaptureSnapshot suffers from the same issue.
-    HANDLE hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-    if (hThreadSnap == INVALID_HANDLE_VALUE)
+    // CreateToolhelp32Snapshot suffers from the same issue.
+    HPSS snapshotHandle;
+    if (ERROR_SUCCESS != PssCaptureSnapshot(GetCurrentProcess(), PSS_CAPTURE_THREADS, 0, &snapshotHandle))
         return 0;
-
-    // Fill in the size of the structure before using it. 
-    THREADENTRY32 te32;
-    te32.dwSize = sizeof(THREADENTRY32);
-
-    DWORD idOfThreadWithAddrInStack = 0; // 0 is an invalid thread id
-    const DWORD dwOwnerPID = GetCurrentProcessId();
-    for (BOOL bHasThread = Thread32First(hThreadSnap, &te32);
-        bHasThread && !idOfThreadWithAddrInStack;
-        bHasThread = Thread32Next(hThreadSnap, &te32))
-    {
-        if (te32.th32OwnerProcessID != dwOwnerPID)
-        {
-            continue; // Don't look at other processes threads
-        }
-        if (HANDLE threadHdl = OpenThread(THREAD_QUERY_INFORMATION | THREAD_QUERY_LIMITED_INFORMATION, FALSE, te32.th32ThreadID))
-        {
-            // The following structures are not provided by the Windows SDK but are well documented.
-            typedef LONG KPRIORITY;
     
-            typedef struct _CLIENT_ID {
-                HANDLE UniqueProcess;
-                HANDLE UniqueThread;
-            } CLIENT_ID;
-            typedef CLIENT_ID* PCLIENT_ID;
-
-            // Actually matches PSS_THREAD_ENTRY https://learn.microsoft.com/en-us/windows/win32/api/processsnapshot/ns-processsnapshot-pss_thread_entry 
-            typedef struct _THREAD_BASIC_INFORMATION
+    HPSSWALK walkMarker;
+    if (ERROR_SUCCESS == PssWalkMarkerCreate(nullptr, &walkMarker))
+    {
+        const DWORD dwOwnerPID = GetCurrentProcessId();
+        PSS_THREAD_ENTRY threadEntry;
+        while (idOfThreadWithAddrInStack == 0 // Stop if we find the thread
+            && ERROR_SUCCESS == PssWalkSnapshot(snapshotHandle, PSS_WALK_THREADS, walkMarker, &threadEntry, sizeof(threadEntry)))
+        {
+            if (threadEntry.ProcessId != dwOwnerPID                         // This should never happen, but be safe
+                || (threadEntry.Flags & PSS_THREAD_FLAGS_TERMINATED) != 0   // Thread was terminated, we can't access its PEB
+                || threadEntry.ExitStatus != STILL_ACTIVE                   // Thread has exited, we can't access its PEB
+                )
             {
-                NTSTATUS                ExitStatus;
-                PVOID                   TebBaseAddress;
-                CLIENT_ID               ClientId;
-                KAFFINITY               AffinityMask;
-                KPRIORITY               Priority;
-                KPRIORITY               BasePriority;
-            } THREAD_BASIC_INFORMATION, * PTHREAD_BASIC_INFORMATION;    
+                continue; // Just continue with the next threads
+            }
 
-            // Get TEB address so that we can lookup the stack information.
-            THREAD_BASIC_INFORMATION basicInfo;
-            const THREADINFOCLASS ThreadBasicInformation = THREADINFOCLASS(0);
-            if (SUCCEEDED(NtQueryInformationThread(threadHdl, ThreadBasicInformation, &basicInfo, sizeof(THREAD_BASIC_INFORMATION), NULL))
-                // The thread might die while we check its TEB, so we have a safe version that won't crash
-                && IsAddressInStackSafe((NT_TIB*)basicInfo.TebBaseAddress, ptr))
+            // The thread might die while we check its TEB, so we have a safe version that won't crash
+            if (IsAddressInStackSafe((NT_TIB*)threadEntry.TebBaseAddress, ptr))
             {
-                idOfThreadWithAddrInStack = te32.th32ThreadID;
-                PWSTR desc;
-                if (SUCCEEDED(GetThreadDescription(threadHdl, &desc)))
+                idOfThreadWithAddrInStack = threadEntry.ThreadId;
+                if (HANDLE threadHdl = OpenThread(THREAD_QUERY_INFORMATION | THREAD_QUERY_LIMITED_INFORMATION, FALSE, threadEntry.ThreadId))
                 {
-                    int nbChars = WideCharToMultiByte(GetConsoleCP(), 0, desc, -1, outDescription, sizeof(ThreadDescBuffer) - 1, NULL, NULL);
-                    outDescription[nbChars] = '\0'; // Make sure to have a null terminated string. nbChars is 0 on error => Empty string
-                    LocalFree(desc);
+                    // PSS_WALK_THREAD_NAME sounds nice until you realize its not implemented.
+                    // It's actually not recognized and you'll get a ERROR_INVALID_PARAMETER (at least on my version on Windows).
+                    // That's probably why it's undocumented. Instead, we'll just use GetThreadDescription
+                    PWSTR desc;
+                    if (GetThreadDescriptionPtr && SUCCEEDED(GetThreadDescriptionPtr(threadHdl, &desc)))
+                    {
+                        const int nbChars = WideCharToMultiByte(GetConsoleCP(), 0, desc, -1, outDescription, sizeof(ThreadDescBuffer) - 1, NULL, NULL);
+                        outDescription[nbChars] = '\0'; // Make sure to have a null terminated string. nbChars is 0 on error => Empty string
+                        LocalFree(desc);
+                    }
+                    CloseHandle(threadHdl);
                 }
             }
-            CloseHandle(threadHdl);
         }
+        PssWalkMarkerFree(walkMarker);
     }
-    CloseHandle(hThreadSnap);
+
+    PssFreeSnapshot(GetCurrentProcess(), snapshotHandle);
+#endif
     return idOfThreadWithAddrInStack;
 }
 
