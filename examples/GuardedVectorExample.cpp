@@ -8,6 +8,7 @@
 #include <vector>
 #include "GuardedVectorExample.h"
 #include <functional>
+#include <chrono>
 
 // Simulate any kind of event system where one may register and trigger delegates
 static std::vector<std::function<void()>> gEventDelegates;
