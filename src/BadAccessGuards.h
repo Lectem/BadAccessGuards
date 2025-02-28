@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿// BadAccessGuards v1.0.0 https://github.com/Lectem/BadAccessGuards
+#pragma once
 
 // 1. Define `BAD_ACCESS_GUARDS_ENABLE=1` for your **in-house** builds (you probably want it off in production...)
 // 2. Declare the shadow memory that will hold the state and pointer to stack with `BA_GUARD_DECL(varname)`
