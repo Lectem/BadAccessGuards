@@ -145,7 +145,7 @@ bool IsAddressInCurrentStack(void* ptr)
     pthread_t currentThread = pthread_self();
     void* stackAddr = pthread_get_stackaddr_np(currentThread);
     size_t stackSize = pthread_get_stacksize_np(currentThread);
-    // Stack grows downards, see https://github.com/apple/darwin-libpthread/blob/2b46cbcc56ba33791296cd9714b2c90dae185ec7/src/pthread.c#L979
+    // Stack grows downards, see https://github.com/apple-oss-distributions/libpthread/blob/1ebf56b3a702df53213c2996e5e128a535d2577e/src/pthread.c#L1020
     // The two functions above do NOT match the pthread_attr_tt attributes! https://github.com/apple/darwin-libpthread/blob/2b46cbcc56ba33791296cd9714b2c90dae185ec7/src/pthread.c#L476
     return (uintptr_t(stackAddr) - stackSize) <= uintptr_t(ptr) && ptr <= stackAddr;
 }
