@@ -243,12 +243,15 @@ struct BadAccessGuardConfig
 BadAccessGuardConfig BadAccessGuardGetConfig();
 void BadAccessGuardSetConfig(BadAccessGuardConfig config);
 
+#define BA_GUARD_MERGE_NAME_(a,b) a##b
+#define BA_GUARD_MERGE_NAME(a,b) BA_GUARD_MERGE_NAME_(a,b)
+
 #define BA_GUARD_DECL(SHADOWNAME)                               mutable BadAccessGuardShadow SHADOWNAME
-#define BA_GUARD_READ(SHADOWNAME)                               BadAccessGuardRead BAGuardRead_##SHADOWNAME{SHADOWNAME}
-#define BA_GUARD_READ_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)     BadAccessGuardRead BAGuardRead_##SHADOWNAME{SHADOWNAME, (ASSERT_OR_WARN), (MESSAGE)}
-#define BA_GUARD_WRITE(SHADOWNAME)                              BadAccessGuardWrite BAGuardWrite_##SHADOWNAME{SHADOWNAME}
-#define BA_GUARD_WRITE_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)    BadAccessGuardWriteEx BAGuardWriteEx_##SHADOWNAME{SHADOWNAME, (ASSERT_OR_WARN), (MESSAGE)}
-#define BA_GUARD_DESTROY(SHADOWNAME)                            BadAccessGuardDestroy BAGuardDestroy_##SHADOWNAME{SHADOWNAME}
+#define BA_GUARD_READ(SHADOWNAME)                               BadAccessGuardRead BA_GUARD_MERGE_NAME(BAGuardRead_,__COUNTER__){SHADOWNAME}
+#define BA_GUARD_READ_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)     BadAccessGuardRead BA_GUARD_MERGE_NAME(BAGuardRead_,__COUNTER__){SHADOWNAME, (ASSERT_OR_WARN), (MESSAGE)}
+#define BA_GUARD_WRITE(SHADOWNAME)                              BadAccessGuardWrite BA_GUARD_MERGE_NAME(BAGuardWrite_,__COUNTER__){SHADOWNAME}
+#define BA_GUARD_WRITE_EX(SHADOWNAME,ASSERT_OR_WARN,MESSAGE)    BadAccessGuardWriteEx BA_GUARD_MERGE_NAME(BAGuardWriteEx_,__COUNTER__){SHADOWNAME, (ASSERT_OR_WARN), (MESSAGE)}
+#define BA_GUARD_DESTROY(SHADOWNAME)                            BadAccessGuardDestroy BA_GUARD_MERGE_NAME(BAGuardDestroy_,__COUNTER__){SHADOWNAME}
 
 #else // BAD_ACCESS_GUARDS_ENABLE
 
